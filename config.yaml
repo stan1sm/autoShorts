@@ -1,0 +1,51 @@
+input:
+  inbox_dir: inbox
+  supported_formats:
+  - mp4
+  - mov
+  - mkv
+  - webm
+  min_source_duration_seconds: 180.0
+transcription:
+  engine: faster-whisper
+  model: medium
+  language: auto
+  cache: true
+clip_selection:
+  strategy: llm
+  llm_provider: anthropic
+  llm_model: claude-sonnet-4-6
+  clips_per_source: 5
+  min_clip_seconds: 20.0
+  max_clip_seconds: 50.0
+  min_gap_between_clips_seconds: 30.0
+  pre_roll_seconds: 0.3
+  post_roll_seconds: 0.5
+  keywords: []
+video:
+  output_resolution:
+  - 1080
+  - 1920
+  reframe_mode: center_crop_blur
+  captions:
+    enabled: true
+    style: karaoke
+    font: Inter-Bold
+    font_size: 72
+    position: bottom_third
+    words_per_caption: 2
+    stroke_width: 6
+    highlight_color: '#ffe500'
+    base_color: '#ffffff'
+  audio:
+    normalize_lufs: -14.0
+  encoding:
+    codec: h264
+    bitrate: 8M
+    fps: 30
+metadata:
+  llm_provider: anthropic
+  llm_model: claude-sonnet-4-6
+  cta: Follow for more.
+output:
+  root_dir: output
