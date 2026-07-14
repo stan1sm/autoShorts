@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>shorts-generator</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>shorts<span>-generator</span></h1>
+  <nav>
+    <button class="tab active" data-tab="run">Run</button>
+    <button class="tab" data-tab="clips">Clips</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ RUN ============ -->
+  <section id="tab-run" class="panel active">
+    <div class="card">
+      <h2>New job</h2>
+      <div class="row">
+        <input id="source-input" type="text"
+               placeholder="Video path (C:\...\video.mp4) or URL (YouTube / Twitch / direct mp4)">
+        <button id="submit-source" class="primary">Start</button>
+      </div>
+      <div class="row">
+        <label class="file-label">
+          <input id="file-input" type="file" accept="video/mp4,video/quicktime,video/x-matroska,video/webm">
+          <span id="file-name">…or choose a file to upload into the inbox</span>
+        </label>
+        <button id="submit-file" class="primary" disabled>Upload &amp; start</button>
+      </div>
+      <label class="check"><input id="force-check" type="checkbox"> Force reprocess (ignore cache)</label>
+      <div id="upload-progress" class="progress" hidden>
+        <div class="progress-track"><div id="upload-progress-fill" class="progress-fill"></div></div>
+        <span id="upload-progress-label" class="progress-label"></span>
+      </div>
+      <div id="run-msg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Jobs</h2>
+      <table id="jobs-table">
+        <thead><tr><th>#</th><th>Source</th><th>Status</th><th>Stage</th><th>Clips</th><th>Error</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p id="jobs-empty" class="muted">No jobs yet.</p>
+    </div>
+  </section>
+
+  <!-- ============ CLIPS ============ -->
+  <section id="tab-clips" class="panel">
+    <div class="row spread">
+      <h2>Finished clips</h2>
+      <button id="refresh-clips">Refresh</button>
+    </div>
+    <div id="clips-container"></div>
+    <p id="clips-empty" class="muted">Nothing rendered yet — start a job on the Run tab.</p>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section id="tab-settings" class="panel">
+    <div class="card" id="hw-card">
+      <h2>Your hardware</h2>
+      <div id="hw-specs" class="specs"></div>
+      <h3>Recommendations</h3>
+      <div id="hw-recs"></div>
+      <div id="hw-warnings"></div>
+    </div>
+
+    <div class="card">
+      <div class="row spread">
+        <h2>Configuration</h2>
+        <button id="save-settings" class="primary">Save settings</button>
+      </div>
+      <p class="muted">Saved to <code>config.yaml</code>. Changes apply to the next job — no restart needed.</p>
+      <form id="settings-form"></form>
+      <div id="settings-msg" class="msg"></div>
+    </div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
