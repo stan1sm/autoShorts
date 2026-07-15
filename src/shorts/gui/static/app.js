@@ -27,7 +27,8 @@ document.querySelectorAll(".tab").forEach((btn) => {
     document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b === btn));
     document.querySelectorAll(".panel").forEach((p) =>
       p.classList.toggle("active", p.id === "tab-" + btn.dataset.tab));
-    if (btn.dataset.tab === "clips") loadClips();
+    if (btn.dataset.tab === "run") loadRunOptions();
+    if (btn.dataset.tab === "clips") { loadClips(); loadPostingOptions(); }
     if (btn.dataset.tab === "settings") { loadSettings(); loadHardware(); loadChannels(); }
   });
 });
@@ -373,23 +374,52 @@ $("#retry-failed").addEventListener("click", async () => {
   } catch (e) { clipsMsg(e.message, "err"); }
 });
 
+// ---------- config forms ----------
+// Per-run choices live on the Run tab; per-publish choices on the Clips tab;
+// Settings keeps only set-once machine/account configuration.
+
+const RUN_SCHEMA = [
+  { path: "campaign.rules", label:
+      "Campaign rules — the brand's brief, verbatim, any language (required focus, " +
+      "mandatory hashtags, per-platform @mentions, CTA). Guides clip selection and " +
+      "titles/descriptions. Changing it? Tick Force to re-select clips.",
+    type: "textarea" },
+  { path: "clip_selection.clips_per_source", label: "Clips per video", type: "number", min: 1, max: 20 },
+  { path: "clip_selection.min_clip_seconds", label: "Min clip length (s)", type: "number" },
+  { path: "clip_selection.max_clip_seconds", label: "Max clip length (s)", type: "number" },
+  { path: "video.effects.zoom.mode", label: "Zoom effect", type: "select", options: [
+    { value: "none", label: "none" },
+    { value: "continuous", label: "continuous (slow zoom)" },
+    { value: "punch_in", label: "punch-in (cuts at sentences)" },
+  ]},
+  { path: "video.effects.zoom.intensity", label: "Zoom intensity (1.01–1.5)", type: "number",
+    min: 1.01, max: 1.5, step: 0.01 },
+  { path: "video.captions.animation", label: "Caption animation", type: "select",
+    options: ["pop", "none"] },
+];
+
+const POSTING_SCHEMA = [
+  { path: "posting.draft_only", label: "Draft only (approve in Buffer before going live)", type: "checkbox" },
+  { path: "posting.schedule_mode", label: "Scheduling", type: "select",
+    options: ["queue", "spread", "immediate"] },
+  { path: "posting.spread.posts_per_day_per_platform", label: "Spread: posts per day", type: "number", min: 1 },
+  { path: "posting.spread.window_days", label: "Spread: window (days)", type: "number", min: 1 },
+];
+
 // ---------- settings tab ----------
 const SETTINGS_SCHEMA = [
-  { section: "Transcription", fields: [
-    { path: "transcription.engine", label: "Engine", type: "select",
+  { section: "System (transcription, LLM, folders)", fields: [
+    { path: "transcription.engine", label: "Transcription engine", type: "select",
       options: ["faster-whisper", "openai", "groq"] },
     { path: "transcription.model", label: "Whisper model (local engine)", type: "select",
       options: ["large-v3", "medium", "small", "base", "tiny"] },
     { path: "transcription.language", label: "Language (auto = detect)", type: "text" },
-  ]},
-  { section: "Clip selection", fields: [
-    { path: "clip_selection.strategy", label: "Strategy", type: "select", options: ["llm", "heuristic"] },
+    { path: "clip_selection.strategy", label: "Clip selection strategy", type: "select",
+      options: ["llm", "heuristic"] },
     { path: "clip_selection.llm_provider", label: "LLM provider", type: "select", options: ["anthropic", "openai"] },
     { path: "clip_selection.llm_model", label: "LLM model", type: "text" },
-    { path: "clip_selection.clips_per_source", label: "Clips per video", type: "number", min: 1, max: 20 },
-    { path: "clip_selection.min_clip_seconds", label: "Min clip length (s)", type: "number" },
-    { path: "clip_selection.max_clip_seconds", label: "Max clip length (s)", type: "number" },
-    { path: "clip_selection.min_gap_between_clips_seconds", label: "Min gap between clips (s)", type: "number" },
+    { path: "input.inbox_dir", label: "Inbox folder", type: "text" },
+    { path: "output.root_dir", label: "Output folder", type: "text" },
   ]},
   { section: "Video & captions", fields: [
     { path: "video.reframe_mode", label: "Reframe mode", type: "select",
@@ -402,44 +432,14 @@ const SETTINGS_SCHEMA = [
     { path: "video.captions.words_per_caption", label: "Words per caption", type: "number", min: 1, max: 4 },
     { path: "video.captions.highlight_color", label: "Highlight color", type: "color" },
     { path: "video.captions.base_color", label: "Base color", type: "color" },
-    { path: "video.captions.animation", label: "Caption animation", type: "select",
-      options: ["pop", "none"] },
-    { path: "video.effects.zoom.mode", label: "Zoom effect", type: "select", options: [
-      { value: "none", label: "none" },
-      { value: "continuous", label: "continuous (slow zoom)" },
-      { value: "punch_in", label: "punch-in (cuts at sentences)" },
-    ]},
-    { path: "video.effects.zoom.intensity", label: "Zoom intensity (1.01–1.5)", type: "number",
-      min: 1.01, max: 1.5, step: 0.01 },
     { path: "video.encoding.fps", label: "FPS", type: "number" },
     { path: "video.encoding.bitrate", label: "Video bitrate", type: "text" },
   ]},
-  { section: "Metadata", fields: [
-    { path: "metadata.llm_provider", label: "LLM provider", type: "select", options: ["anthropic", "openai"] },
-    { path: "metadata.llm_model", label: "LLM model", type: "text" },
-    { path: "metadata.cta", label: "Call to action", type: "text" },
-  ]},
-  { section: "Campaign rules", fields: [
-    { path: "campaign.rules", label:
-        "Brand / campaign brief (any language) — required focus, mandatory hashtags, " +
-        "per-platform @mentions, CTA. Injected into clip selection and metadata. " +
-        "Note: re-run with Force to re-select clips under new rules.",
-      type: "textarea" },
-  ]},
-  { section: "Input / output", fields: [
-    { path: "input.inbox_dir", label: "Inbox folder", type: "text" },
-    { path: "input.min_source_duration_seconds", label: "Min source duration (s)", type: "number" },
-    { path: "output.root_dir", label: "Output folder", type: "text" },
-  ]},
-  { section: "Publishing (Buffer)", fields: [
+  { section: "Publishing defaults (Buffer)", fields: [
     { path: "posting.enabled", label: "Enable publishing", type: "checkbox" },
-    { path: "posting.draft_only", label: "Draft only (approve in Buffer before going live)", type: "checkbox" },
-    { path: "posting.platforms", label: "Platforms", type: "multicheck",
+    { path: "posting.platforms", label: "Default platforms", type: "multicheck",
       options: ["youtube", "instagram", "tiktok"] },
-    { path: "posting.schedule_mode", label: "Scheduling", type: "select",
-      options: ["queue", "spread", "immediate"] },
-    { path: "posting.spread.window_days", label: "Spread: window (days)", type: "number", min: 1 },
-    { path: "posting.spread.posts_per_day_per_platform", label: "Spread: posts per day", type: "number", min: 1 },
+    { path: "metadata.cta", label: "Fallback call to action (campaign rules override)", type: "text" },
     { path: "posting.spread.same_source_gap_hours", label: "Spread: hours between clips of one video", type: "number", min: 1 },
     { path: "posting.spread.quiet_hours.0", label: "Spread: quiet hours start (0-23)", type: "number", min: 0, max: 23 },
     { path: "posting.spread.quiet_hours.1", label: "Spread: quiet hours end (0-23)", type: "number", min: 0, max: 23 },
@@ -502,16 +502,62 @@ function fieldInput(f, value) {
   return `<input type="text" data-path="${f.path}" value="${esc(value)}">`;
 }
 
+const fieldRow = (f, cfg) => `
+  <div class="field">
+    <label>${esc(f.label)}</label>
+    ${fieldInput(f, getPath(cfg, f.path))}
+  </div>`;
+
 async function loadSettings() {
   currentConfig = await api("/api/config");
-  $("#settings-form").innerHTML = SETTINGS_SCHEMA.map((sec) => `
-    <fieldset><legend>${esc(sec.section)}</legend>
-      ${sec.fields.map((f) => `
-        <div class="field">
-          <label>${esc(f.label)}</label>
-          ${fieldInput(f, getPath(currentConfig, f.path))}
-        </div>`).join("")}
-    </fieldset>`).join("");
+  $("#settings-form").innerHTML = SETTINGS_SCHEMA.map((sec, i) => `
+    <details class="settings-section" ${i === 0 ? "open" : ""}>
+      <summary>${esc(sec.section)}</summary>
+      ${sec.fields.map((f) => fieldRow(f, currentConfig)).join("")}
+    </details>`).join("");
+}
+
+// ---------- auto-saved option panels (Run + Clips tabs) ----------
+// Each change updates the shared config and PUTs it after a short debounce.
+
+const optionsMsg = (sel, text, cls) => {
+  const el = $(sel);
+  el.textContent = text;
+  el.className = "msg inline " + (cls || "");
+};
+
+function attachAutoSave(formSel, msgSel) {
+  let timer = null;
+  const handler = (e) => {
+    const el = e.target;
+    if (!el.dataset?.path || !currentConfig) return;
+    let value = el.type === "checkbox" ? el.checked : el.value;
+    if (el.type === "number") value = value === "" ? null : Number(value);
+    setPath(currentConfig, el.dataset.path, value);
+    optionsMsg(msgSel, "saving…");
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      try {
+        await api("/api/config", { method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(currentConfig) });
+        optionsMsg(msgSel, "saved ✓", "ok");
+      } catch (err) { optionsMsg(msgSel, err.message, "err"); }
+    }, 500);
+  };
+  $(formSel).addEventListener("input", handler);
+  $(formSel).addEventListener("change", handler);
+}
+
+async function loadRunOptions() {
+  currentConfig = await api("/api/config");
+  $("#run-options").innerHTML = RUN_SCHEMA.map((f) => fieldRow(f, currentConfig)).join("");
+}
+
+// Rendered on tab activation only — loadClips polls while publish jobs run,
+// and re-rendering the form mid-edit would wipe the operator's input.
+async function loadPostingOptions() {
+  currentConfig = await api("/api/config");
+  $("#post-options").innerHTML = POSTING_SCHEMA.map((f) => fieldRow(f, currentConfig)).join("");
 }
 
 $("#save-settings").addEventListener("click", async () => {
@@ -619,3 +665,6 @@ $("#refresh-channels").addEventListener("click", async () => {
 
 // ---------- init ----------
 pollJobs();
+loadRunOptions();
+attachAutoSave("#run-options", "#run-options-msg");
+attachAutoSave("#post-options", "#post-options-msg");
