@@ -52,6 +52,8 @@ metadata:
   llm_provider: anthropic
   llm_model: claude-sonnet-4-6
   cta: Follow for more.
+campaign:
+  rules: ''
 output:
   root_dir: output
 hosting:

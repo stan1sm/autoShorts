@@ -130,6 +130,20 @@ Render effects (`video.effects` / caption settings, all optional): caption
 pop-in animation, and a zoom effect — `continuous` (slow push across the clip)
 or `punch_in` (hard 1.0x↔intensity cuts at sentence boundaries).
 
+## Campaign rules
+
+Clipping campaigns usually come with a brief: what the clips must focus on,
+mandatory hashtags, per-platform @mentions, an exact CTA. Paste the brief —
+verbatim, any language — into `campaign.rules` (Settings → *Campaign rules* in
+the GUI). It is injected into both the clip-selection and metadata prompts:
+selection only picks clips that can comply, and titles/descriptions/hashtags
+follow the brief (mandatory hashtags on every platform, platform-specific
+mentions only on their platform, rules-CTA overriding `metadata.cta`).
+
+Note: clip selection is cached per source (`selection.json`) — after changing
+the rules, re-run with `--force` (CLI) or Force (GUI) to re-select under the
+new brief.
+
 Each stage caches to disk, so a crash mid-run resumes where it left off. A single
 failed clip doesn't stop the others; failures are summarized at exit (exit code 2).
 

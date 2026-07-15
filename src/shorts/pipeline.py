@@ -119,7 +119,10 @@ def run_source(raw_input: str, cfg: AppConfig, force: bool = False, on_event=Non
                         logger.log("select.fallback_heuristic")
                         raw_candidates = heuristic_select(transcript, cfg.clip_selection, source.path)
                     else:
-                        raw_candidates, response = llm_select(transcript, cfg.clip_selection, provider)
+                        raw_candidates, response = llm_select(
+                            transcript, cfg.clip_selection, provider,
+                            campaign_rules=cfg.campaign.rules,
+                        )
                         _log_cost(costs_path, source.source_id, "select", response)
                 else:
                     raw_candidates = heuristic_select(transcript, cfg.clip_selection, source.path)
@@ -142,7 +145,10 @@ def run_source(raw_input: str, cfg: AppConfig, force: bool = False, on_event=Non
             clip_label = f"clip_{idx:02d}"
             try:
                 with logger.stage(f"metadata.{clip_label}"):
-                    meta, response = generate_metadata(cand, transcript, cfg.metadata, meta_provider)
+                    meta, response = generate_metadata(
+                        cand, transcript, cfg.metadata, meta_provider,
+                        campaign_rules=cfg.campaign.rules,
+                    )
                     if response is not None:
                         _log_cost(costs_path, source.source_id, f"metadata.{clip_label}", response)
 
