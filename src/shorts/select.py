@@ -26,9 +26,19 @@ You optimize for clips that perform on TikTok, Reels, and YouTube Shorts:
 - a clear payoff, punchline, or takeaway by the end.
 Respond ONLY with a JSON array, no prose."""
 
+_RULES_BLOCK = """CAMPAIGN RULES — the client's brief for this campaign. It may be written in
+any language; follow it regardless. Only select clips that can comply (e.g.
+required topic/focus, minimum length, what the clip must push the viewer to
+do). If a rule conflicts with any other instruction here, the campaign rule
+wins.
+
+{rules}
+
+"""
+
 _USER_PROMPT = """Below is a transcript with segment timestamps (seconds).
 
-Select up to {n} non-overlapping clips, each between {min_s:.0f} and {max_s:.0f} seconds long,
+{rules_block}Select up to {n} non-overlapping clips, each between {min_s:.0f} and {max_s:.0f} seconds long,
 with at least {gap:.0f} seconds between selected clips.
 
 Return a JSON array of objects with exactly these keys:
@@ -64,10 +74,13 @@ def _format_transcript(transcript: Transcript, max_chars: int = 150_000) -> str:
 
 
 def llm_select(
-    transcript: Transcript, cfg: ClipSelectionConfig, provider: LLMProvider
+    transcript: Transcript, cfg: ClipSelectionConfig, provider: LLMProvider,
+    campaign_rules: str = "",
 ) -> tuple[list[ClipCandidate], object]:
     """Ask the LLM for candidates. Returns (candidates, LLMResponse for cost logging)."""
+    rules = campaign_rules.strip()
     prompt = _USER_PROMPT.format(
+        rules_block=_RULES_BLOCK.format(rules=rules) if rules else "",
         n=cfg.clips_per_source,
         min_s=cfg.min_clip_seconds,
         max_s=cfg.max_clip_seconds,

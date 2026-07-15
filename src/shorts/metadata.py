@@ -17,9 +17,21 @@ Rules:
 - Hashtags: mix broad and niche. TikTok 8-10, Instagram 3-5, YouTube 2-3 plus #shorts.
 Respond ONLY with a JSON object, no prose."""
 
+_RULES_BLOCK = """CAMPAIGN RULES — the client's brief for this campaign. It may be written in
+any language; follow it regardless, and if it conflicts with any other
+instruction here (including the call to action), the campaign rule wins.
+- Mandatory hashtags go in EVERY platform's hashtag list.
+- Platform-specific mandatory tags/@mentions go in THAT platform's list only
+  (each list is appended verbatim to that platform's caption).
+- If the rules specify a CTA, end the description with it, exactly as given.
+
+{rules}
+
+"""
+
 _USER_PROMPT = """Write metadata for this clip.
 
-Clip hook: {hook}
+{rules_block}Clip hook: {hook}
 Why it was selected: {reason}
 
 Clip transcript:
@@ -31,7 +43,8 @@ Return a JSON object with exactly these keys:
 - "title": string (<=60 chars)
 - "description": string (1-2 sentences{cta_note})
 - "hashtags": object with keys "tiktok", "instagram", "youtube", each a JSON array
-  of hashtag strings starting with "#". The youtube list must include "#shorts"."""
+  of hashtag strings starting with "#" (plus any mandatory "@" mentions).
+  The youtube list must include "#shorts"."""
 
 
 @dataclass
@@ -62,14 +75,17 @@ def generate_metadata(
     transcript: Transcript,
     cfg: MetadataConfig,
     provider: LLMProvider | None,
+    campaign_rules: str = "",
 ) -> tuple[ClipMetadata, LLMResponse | None]:
     """Returns (metadata, LLMResponse or None) — the response is for cost logging."""
     if provider is None:
         return _fallback_metadata(candidate, cfg.cta), None
 
+    rules = campaign_rules.strip()
     words = transcript.words_between(candidate.start, candidate.end)
     text = " ".join(w.word for w in words) or candidate.hook
     prompt = _USER_PROMPT.format(
+        rules_block=_RULES_BLOCK.format(rules=rules) if rules else "",
         hook=candidate.hook or "(none)",
         reason=candidate.reason or "(none)",
         text=text[:4000],

@@ -173,12 +173,20 @@ class PostingConfig(BaseModel):
     rate_limit: RateLimitConfig = RateLimitConfig()
 
 
+class CampaignConfig(BaseModel):
+    # Free-text campaign brief / brand rules (any language), injected verbatim
+    # into the clip-selection and metadata LLM prompts. Typical content: what
+    # the clips must focus on, mandatory hashtags, per-platform @mentions, CTA.
+    rules: str = ""
+
+
 class AppConfig(BaseModel):
     input: InputConfig = InputConfig()
     transcription: TranscriptionConfig = TranscriptionConfig()
     clip_selection: ClipSelectionConfig = ClipSelectionConfig()
     video: VideoConfig = VideoConfig()
     metadata: MetadataConfig = MetadataConfig()
+    campaign: CampaignConfig = CampaignConfig()
     output: OutputConfig = OutputConfig()
     hosting: HostingConfig = HostingConfig()
     posting: PostingConfig = PostingConfig()

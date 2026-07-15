@@ -381,6 +381,13 @@ const SETTINGS_SCHEMA = [
     { path: "metadata.llm_model", label: "LLM model", type: "text" },
     { path: "metadata.cta", label: "Call to action", type: "text" },
   ]},
+  { section: "Campaign rules", fields: [
+    { path: "campaign.rules", label:
+        "Brand / campaign brief (any language) — required focus, mandatory hashtags, " +
+        "per-platform @mentions, CTA. Injected into clip selection and metadata. " +
+        "Note: re-run with Force to re-select clips under new rules.",
+      type: "textarea" },
+  ]},
   { section: "Input / output", fields: [
     { path: "input.inbox_dir", label: "Inbox folder", type: "text" },
     { path: "input.min_source_duration_seconds", label: "Min source duration (s)", type: "number" },
@@ -444,6 +451,8 @@ function fieldInput(f, value) {
     }).join("");
     return `<select data-path="${f.path}">${opts}</select>`;
   }
+  if (f.type === "textarea")
+    return `<textarea data-path="${f.path}" rows="8" spellcheck="false">${esc(value ?? "")}</textarea>`;
   if (f.type === "checkbox")
     return `<input type="checkbox" data-path="${f.path}" ${value ? "checked" : ""}>`;
   if (f.type === "color")
