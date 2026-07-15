@@ -85,6 +85,12 @@ def create_app(config_path: Path):
         schedule = body.get("schedule") or None
         if schedule is not None and not isinstance(schedule, dict):
             raise HTTPException(status_code=422, detail="schedule must be an object")
+        platforms = body.get("platforms") or None
+        if platforms is not None and not (
+            isinstance(platforms, dict)
+            and all(isinstance(v, list) for v in platforms.values())
+        ):
+            raise HTTPException(status_code=422, detail="platforms must map clip -> list")
 
         if body.get("dry_run"):
             from ..stages.host import host_source
@@ -92,11 +98,13 @@ def create_app(config_path: Path):
 
             try:
                 host_result = host_source(source_id, cfg, dry_run=True)
-                post_result = post_source(source_id, cfg, dry_run=True, schedule=schedule)
+                post_result = post_source(
+                    source_id, cfg, dry_run=True, schedule=schedule, platforms=platforms
+                )
             except (RuntimeError, ValueError) as exc:
                 raise HTTPException(status_code=422, detail=str(exc))
             return {"dry_run": True, "host": asdict(host_result), "post": asdict(post_result)}
-        return publish_jobs.submit(source_id, schedule=schedule)
+        return publish_jobs.submit(source_id, schedule=schedule, platforms=platforms)
 
     @app.get("/api/publish")
     def list_publish_jobs() -> list[dict]:

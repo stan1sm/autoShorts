@@ -70,7 +70,11 @@ Opens `http://127.0.0.1:8501` with three pages:
 - **Clips** — preview every finished clip in the browser with its title,
   description, and per-platform hashtags. If publishing is enabled, this is also
   where you host + schedule a source to Buffer, refresh connected channels, and
-  retry failed posts.
+  retry failed posts. Each clip has per-platform checkboxes (defaulting to
+  `posting.platforms`) — untick to keep a clip off a platform, untick all to
+  skip the clip entirely; already-posted platforms show as status badges
+  instead. Retries only ever touch the exact (clip, platform) pairs that
+  failed, so deselected platforms stay deselected.
 - **Settings** — edit everything in `config.yaml` from a form, plus a hardware
   panel (CPU/RAM/GPU/ffmpeg/API-key detection) with one-click "Apply"
   recommendations for the right Whisper model and LLM provider. Saving rewrites

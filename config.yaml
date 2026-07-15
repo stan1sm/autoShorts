@@ -16,8 +16,8 @@ clip_selection:
   llm_provider: anthropic
   llm_model: claude-sonnet-4-6
   clips_per_source: 5
-  min_clip_seconds: 20.0
-  max_clip_seconds: 50.0
+  min_clip_seconds: 15.0
+  max_clip_seconds: 35.0
   min_gap_between_clips_seconds: 30.0
   pre_roll_seconds: 0.3
   post_roll_seconds: 0.5
@@ -53,7 +53,14 @@ metadata:
   llm_model: claude-sonnet-4-6
   cta: Follow for more.
 campaign:
-  rules: ''
+  rules: 'LINEE GUIDA CONTENUTI; Lunghezza minima del video: 15 secondi; Il video
+    deve essere composto SOLO da clip fornite dal brand; Il contenuto deve avere come
+    UNICO focus il podcast 75.25 Lab; Non è consentito utilizzare contenuti di altri
+    artisti o creator come parte del video; Il video deve stimolare l’utente ad andare
+    a vedere l’episodio del podcast.; Inserire come CTA: "Guarda l''episodio completo
+    di 75.25 Lab su Youtube"; HASHTAG OBBLIGATORI; #7525lab; #hyblue; TAG OBBLIGATORI;
+    Instagram; @75.25_lab_podcast; @hyblue_supplements; TikTok; @75.25_lab_podcast;
+    @hyblue.longevity'
 output:
   root_dir: output
 hosting:
@@ -70,6 +77,7 @@ posting:
   draft_only: true
   platforms:
   - youtube
+  - tiktok
   schedule_mode: spread
   spread:
     window_days: 7

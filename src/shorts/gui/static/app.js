@@ -210,10 +210,40 @@ function collectSchedule(groupEl) {
   return schedule;
 }
 
+const ALL_PLATFORMS = ["youtube", "instagram", "tiktok"];
+
+// Checkboxes for the platforms this clip can still be posted to (already
+// posted platforms are shown as badges instead). Defaults to the platforms
+// configured in Settings.
+function platformRow(sourceId, clipFile, postIdx, cfgPlatforms) {
+  const recs = postIdx[`${sourceId}/${clipFile}`] || {};
+  const open = ALL_PLATFORMS.filter((p) => !recs[p]?.buffer_post_id);
+  if (!open.length) return "";
+  const boxes = open.map((p) => `
+    <label class="inline-check">
+      <input type="checkbox" class="clip-platform" data-clip="${esc(clipFile)}"
+             value="${p}" ${cfgPlatforms.includes(p) ? "checked" : ""}> ${p}
+    </label>`).join("");
+  return `<div class="platform-row"><label>Post to</label>${boxes}</div>`;
+}
+
+// {clip_file: [platform, ...]} for every clip that has checkboxes rendered —
+// an all-unchecked clip is sent as [] so the backend skips it.
+function collectPlatforms(groupEl) {
+  const platforms = {};
+  groupEl.querySelectorAll(".clip-platform").forEach((el) => {
+    (platforms[el.dataset.clip] ??= []);
+    if (el.checked) platforms[el.dataset.clip].push(el.value);
+  });
+  return platforms;
+}
+
 function publishJobLine(job) {
   if (!job) return "";
   const stats = job.post && !Array.isArray(job.post)
-    ? ` — ${job.post.succeeded} created, ${job.post.skipped_duplicates} skipped, ${job.post.failed.length} failed`
+    ? ` — ${job.post.succeeded} created, ${job.post.skipped_duplicates} skipped` +
+      (job.post.skipped_deselected ? `, ${job.post.skipped_deselected} deselected` : "") +
+      `, ${job.post.failed.length} failed`
     : "";
   const stage = job.status === "running" ? ` (${job.stage === "host" ? "uploading clips…" : "creating posts…"})` : "";
   return `<span class="badge ${job.status}">publish: ${job.status}</span>${esc(stage + stats)}
@@ -226,17 +256,19 @@ function publishFailures(job) {
   return [...(job.host?.failed || []), ...(post || [])];
 }
 
-let clipsData = { results: [], postIdx: {}, hostedSet: new Set(), publishJobs: [] };
+let clipsData = { results: [], postIdx: {}, hostedSet: new Set(), publishJobs: [],
+                  cfgPlatforms: [] };
 
 async function loadClips() {
-  const [results, postsData, publishJobs] = await Promise.all([
-    api("/api/results"), api("/api/posts"), api("/api/publish"),
+  const [results, postsData, publishJobs, config] = await Promise.all([
+    api("/api/results"), api("/api/posts"), api("/api/publish"), api("/api/config"),
   ]);
   clipsData = {
     results,
     postIdx: indexPosts(postsData.posts),
     hostedSet: new Set(postsData.hosted.map((h) => h.clip_file)),
     publishJobs,
+    cfgPlatforms: config.posting?.platforms || [],
   };
   renderClips();
   if (publishJobs.some((j) => j.status === "queued" || j.status === "running")) {
@@ -247,7 +279,7 @@ async function loadClips() {
 let publishTimer = null;
 
 function renderClips() {
-  const { results, postIdx, hostedSet, publishJobs } = clipsData;
+  const { results, postIdx, hostedSet, publishJobs, cfgPlatforms } = clipsData;
   $("#clips-empty").style.display = results.length ? "none" : "block";
   $("#clips-container").innerHTML = results.map((m) => {
     const job = publishJobs.find((j) => j.source_id === m.source_id);  // newest first
@@ -283,6 +315,7 @@ function renderClips() {
               <div class="desc">${esc(c.description)}</div>
               <div class="muted">${c.duration}s · score ${c.score}</div>
               ${postBadges(m.source_id, c.file, postIdx, hostedSet)}
+              ${platformRow(m.source_id, c.file, postIdx, cfgPlatforms)}
               ${whenRow}
               <div class="tags">${tags}</div>
             </div>
@@ -294,13 +327,17 @@ function renderClips() {
 
   document.querySelectorAll(".publish-btn").forEach((btn) => btn.addEventListener("click", async () => {
     btn.disabled = true;
-    const schedule = collectSchedule(btn.closest(".source-group"));
+    const group = btn.closest(".source-group");
+    const schedule = collectSchedule(group);
+    const platforms = collectPlatforms(group);
     try {
       await api("/api/publish", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source_id: btn.dataset.source, schedule }) });
+        body: JSON.stringify({ source_id: btn.dataset.source, schedule, platforms }) });
       const picked = Object.keys(schedule).length;
+      const skipped = Object.values(platforms).filter((p) => !p.length).length;
       clipsMsg(`Publish queued for ${btn.dataset.source}` +
-        (picked ? ` — ${picked} clip(s) at your chosen times, rest auto.` : "."), "ok");
+        (picked ? ` — ${picked} clip(s) at your chosen times` : "") +
+        (skipped ? ` — ${skipped} clip(s) deselected` : "") + ".", "ok");
       loadClips();
     } catch (e) { clipsMsg(e.message, "err"); btn.disabled = false; }
   }));
@@ -312,7 +349,8 @@ function renderClips() {
     try {
       const res = await api("/api/publish", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source_id: btn.dataset.source, dry_run: true,
-                               schedule: collectSchedule(btn.closest(".source-group")) }) });
+                               schedule: collectSchedule(btn.closest(".source-group")),
+                               platforms: collectPlatforms(btn.closest(".source-group")) }) });
       const posts = res.post.dry_run_inputs.map((e) =>
         `--- ${e.clip} -> ${e.platform} ---\n${JSON.stringify(e.input, null, 2)}`).join("\n\n");
       out.textContent =
