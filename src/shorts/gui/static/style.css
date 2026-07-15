@@ -191,11 +191,13 @@ tr:hover td { background: #ffffff06; }
 .err-text { color: var(--err); font-size: 0.85rem; }
 .post-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.45rem 0; }
 .due-line { font: 0.72rem var(--mono); color: var(--ok); margin: 0.15rem 0 0.35rem; }
-.when-row { display: flex; align-items: center; gap: 0.45rem; margin: 0.35rem 0;
-            flex-wrap: wrap; }
-.when-row label { font: 600 0.68rem var(--mono); text-transform: uppercase;
-                  letter-spacing: 0.1em; color: var(--muted); }
+.when-row, .platform-row { display: flex; align-items: center; gap: 0.45rem;
+                           margin: 0.35rem 0; flex-wrap: wrap; }
+.when-row > label, .platform-row > label {
+  font: 600 0.68rem var(--mono); text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--muted); }
 .when-row .muted { font-size: 0.75rem; }
+.platform-row .inline-check { font-size: 0.82rem; }
 .dryrun-out {
   background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 0.9rem 1rem; font: 0.76rem/1.5 var(--mono); max-height: 380px;

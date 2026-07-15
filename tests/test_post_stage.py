@@ -133,8 +133,10 @@ def test_mutation_error_marks_failed_and_retry_recovers(cfg):
     calls_before_retry = len(fake.create_post_inputs)
     results = retry_failed(cfg, client=_client(fake))
     assert len(results) == 1
-    assert results[0].succeeded == 2  # only the two failed tiktok posts retried
-    assert results[0].skipped_duplicates == 4
+    # Retry targets exactly the failed (clip, platform) pairs — the four
+    # already-scheduled posts are not even revisited.
+    assert results[0].succeeded == 2
+    assert results[0].skipped_duplicates == 0
     assert len(fake.create_post_inputs) == calls_before_retry + 2
 
 
@@ -187,3 +189,70 @@ def test_schedule_in_the_past_is_rejected(cfg):
     with pytest.raises(RuntimeError, match="in the past"):
         post_source(SOURCE_ID, cfg, dry_run=True,
                     schedule={f"clips/{SOURCE_ID}_01_x.mp4": "2020-01-01T10:00"})
+
+
+# --- per-clip platform selection ---
+
+CLIP1 = f"clips/{SOURCE_ID}_01_x.mp4"
+CLIP2 = f"clips/{SOURCE_ID}_02_x.mp4"
+
+
+def test_per_clip_platform_selection(cfg):
+    fake = FakeBufferHttp()
+    result = post_source(SOURCE_ID, cfg, client=_client(fake),
+                         platforms={CLIP1: ["youtube"], CLIP2: []})
+    assert result.succeeded == 1
+    assert result.skipped_deselected == 1  # clip 2: nothing selected
+    assert [i["channelId"] for i in fake.create_post_inputs] == ["ch_yt"]
+
+    manifest = json.loads((cfg.output.root_dir / SOURCE_ID / "manifest.json").read_text())
+    assert set(manifest["clips"][0]["buffer_posts"]) == {"youtube"}
+    assert "buffer_posts" not in manifest["clips"][1]
+
+
+def test_per_clip_platforms_default_to_config(cfg):
+    """Clips without an override still post to every configured platform."""
+    fake = FakeBufferHttp()
+    result = post_source(SOURCE_ID, cfg, client=_client(fake),
+                         platforms={CLIP1: ["instagram"]})
+    assert result.succeeded == 4  # clip1 -> IG; clip2 -> all three
+    by_clip = {}
+    for i in fake.create_post_inputs:
+        by_clip.setdefault(i["assets"][0]["video"]["url"], set()).add(i["channelId"])
+    assert by_clip[f"https://media.example/{SOURCE_ID}_01.mp4"] == {"ch_ig"}
+    assert by_clip[f"https://media.example/{SOURCE_ID}_02.mp4"] == {"ch_yt", "ch_ig", "ch_tt"}
+
+
+def test_unknown_platform_is_rejected(cfg):
+    with pytest.raises(RuntimeError, match="unsupported platform"):
+        post_source(SOURCE_ID, cfg, dry_run=True, platforms={CLIP1: ["myspace"]})
+
+
+def test_spread_slots_are_per_platform(cfg):
+    """A platform chosen by only some clips fills its earliest spread slots —
+    no gaps from clips that deselected it."""
+    from datetime import datetime, timezone
+
+    cfg.posting.schedule_mode = "spread"
+    now = datetime(2030, 8, 1, 10, 0, tzinfo=timezone.utc)
+    result = post_source(SOURCE_ID, cfg, dry_run=True, now=now,
+                         platforms={CLIP1: ["youtube"], CLIP2: ["youtube", "tiktok"]})
+    due = {(e["clip"], e["platform"]): e["input"]["dueAt"] for e in result.dry_run_inputs}
+    # clip2 is tiktok's FIRST post, so it gets tiktok's first slot — the same
+    # time as youtube's first slot (clip1), not youtube's second.
+    assert due[(CLIP2, "tiktok")] == due[(CLIP1, "youtube")]
+    assert due[(CLIP2, "youtube")] != due[(CLIP1, "youtube")]
+
+
+def test_retry_does_not_resurrect_deselected_platforms(cfg):
+    """A platform deselected at publish time must not come back via retry."""
+    fake = FakeBufferHttp(fail_platforms={"youtube"})
+    first = post_source(SOURCE_ID, cfg, client=_client(fake),
+                        platforms={CLIP1: ["youtube"], CLIP2: ["youtube"]})
+    assert len(first.failed) == 2
+
+    fake.fail_platforms = set()
+    results = retry_failed(cfg, client=_client(fake))
+    assert results[0].succeeded == 2
+    # Only youtube was ever attempted — retry created no IG/TikTok posts.
+    assert {i["channelId"] for i in fake.create_post_inputs} == {"ch_yt"}

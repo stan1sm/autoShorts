@@ -22,6 +22,9 @@ from ..state import StateStore
 from .host import clip_key
 
 
+_SUPPORTED_PLATFORMS = ("youtube", "instagram", "tiktok")
+
+
 @dataclass
 class PostResult:
     source_id: str
@@ -29,6 +32,7 @@ class PostResult:
     succeeded: int = 0
     skipped_duplicates: int = 0
     skipped_unhosted: int = 0
+    skipped_deselected: int = 0  # clips excluded via per-clip platform choice
     failed: list[str] = field(default_factory=list)  # "clip/platform: error"
     dry_run_inputs: list[dict] = field(default_factory=list)
 
@@ -64,7 +68,13 @@ def post_source(
     client: BufferClient | None = None,
     now: datetime | None = None,
     schedule: dict[str, str] | None = None,
+    platforms: dict[str, list[str]] | None = None,
+    platforms_exclusive: bool = False,
 ) -> PostResult:
+    """platforms: per-clip platform choice {clip_file: [platform, ...]} from the
+    GUI. A missing clip falls back to posting.platforms (or is skipped entirely
+    when platforms_exclusive is set — used by retry-failed to touch only the
+    exact (clip, platform) pairs that failed); an empty list skips the clip."""
     posting = cfg.posting
     if not posting.enabled:
         raise RuntimeError("posting.enabled is false in config")
@@ -73,8 +83,17 @@ def post_source(
             "schedule_mode=immediate makes no sense with draft_only=true — "
             "drafts are never auto-published; pick one"
         )
+    overrides = platforms or {}
+    for clip_file, plist in overrides.items():
+        bad = [p for p in plist if p not in _SUPPORTED_PLATFORMS]
+        if bad:
+            raise RuntimeError(f"unsupported platform(s) for {clip_file}: {', '.join(bad)}")
     now = now or datetime.now(timezone.utc)
     chosen_times = _parse_schedule(schedule, now)
+
+    def clip_platforms(clip: dict) -> list[str]:
+        default = [] if platforms_exclusive else posting.platforms
+        return overrides.get(clip["file"], default)
 
     out_dir = cfg.output.root_dir / source_id
     manifest = load_manifest_dict(out_dir)
@@ -86,44 +105,55 @@ def post_source(
         clips = [c for c in manifest.get("clips", [])]
         postable = []
         for clip in clips:
-            if clip.get("hosted_url"):
-                postable.append(clip)
-            else:
+            if not clip.get("hosted_url"):
                 result.skipped_unhosted += 1
+            elif not clip_platforms(clip):
+                result.skipped_deselected += 1
+            else:
+                postable.append(clip)
 
         if not postable:
             return result
 
+        # Only resolve channels for platforms actually used in this run.
+        needed = [
+            p for p in _SUPPORTED_PLATFORMS
+            if any(p in clip_platforms(c) for c in postable)
+        ]
         if dry_run:
-            channels = {p: f"<{p}-channel>" for p in posting.platforms}
+            channels = {p: f"<{p}-channel>" for p in needed}
         else:
             if client is None:
                 client = _make_client(cfg)
-            channels = resolve_channels(
-                state, lambda: client, posting.platforms, refresh=False
-            )
+            channels = resolve_channels(state, lambda: client, needed, refresh=False)
 
-        # Per-platform dueAt lists (None means Buffer's queue decides).
+        # Per-platform dueAt lists (None means Buffer's queue decides), sized to
+        # the clips that actually target each platform and consumed in order.
         due_by_platform: dict[str, list[datetime | None]] = {}
-        for platform in posting.platforms:
+        next_slot: dict[str, int] = {}
+        for platform in needed:
+            count = sum(1 for c in postable if platform in clip_platforms(c))
             if posting.schedule_mode == "spread":
-                due_by_platform[platform] = list(spread_times(len(postable), posting, now))
+                due_by_platform[platform] = list(spread_times(count, posting, now))
             elif posting.schedule_mode == "immediate":
-                due_by_platform[platform] = list(immediate_times(len(postable), now))
+                due_by_platform[platform] = list(immediate_times(count, now))
             else:
-                due_by_platform[platform] = [None] * len(postable)
+                due_by_platform[platform] = [None] * count
+            next_slot[platform] = 0
 
-        for idx, clip in enumerate(postable):
+        for clip in postable:
             key = clip_key(source_id, clip["file"])
             buffer_posts = clip.setdefault("buffer_posts", {})
-            for platform in posting.platforms:
+            for platform in clip_platforms(clip):
                 existing = state.get_post(key, platform)
                 if existing and existing.buffer_post_id:
                     result.skipped_duplicates += 1
                     continue
 
                 # Operator-picked time wins over the schedule_mode default.
-                due_at = chosen_times.get(clip["file"]) or due_by_platform[platform][idx]
+                slot = next_slot[platform]
+                next_slot[platform] += 1
+                due_at = chosen_times.get(clip["file"]) or due_by_platform[platform][slot]
                 post_input = build_post_input(
                     clip, platform, channels[platform], clip["hosted_url"], posting, due_at
                 )
@@ -165,14 +195,23 @@ def post_source(
 def retry_failed(
     cfg: AppConfig, dry_run: bool = False, client: BufferClient | None = None
 ) -> list[PostResult]:
-    """Re-run the POST stage for every source that has failed posts.
-    post_source skips anything already scheduled, so only failures retry."""
+    """Retry exactly the (clip, platform) pairs that failed — nothing else, so
+    platforms deselected at publish time are never resurrected by a retry."""
     state = StateStore(cfg.output.root_dir / ".state.db")
     try:
-        source_ids = sorted({p.source_id for p in state.list_posts(status="failed")})
+        failed = state.list_posts(status="failed")
     finally:
         state.close()
-    return [post_source(sid, cfg, dry_run=dry_run, client=client) for sid in source_ids]
+    by_source: dict[str, dict[str, list[str]]] = {}
+    for p in failed:
+        # State keys are "{source_id}/clips/x.mp4"; manifests use "clips/x.mp4".
+        rel = p.clip_file.partition("/")[2]
+        by_source.setdefault(p.source_id, {}).setdefault(rel, []).append(p.platform)
+    return [
+        post_source(sid, cfg, dry_run=dry_run, client=client,
+                    platforms=by_source[sid], platforms_exclusive=True)
+        for sid in sorted(by_source)
+    ]
 
 
 def format_dry_run(result: PostResult) -> str:

@@ -27,13 +27,14 @@ class PublishManager:
 
     def submit(
         self, source_id: str | None, retry: bool = False,
-        schedule: dict | None = None,
+        schedule: dict | None = None, platforms: dict | None = None,
     ) -> dict:
         job = {
             "id": next(self._ids),
             "source_id": source_id,   # None for retry-all jobs
             "retry": retry,
             "schedule": schedule,     # {clip_file: "YYYY-MM-DDTHH:MM"} from the GUI
+            "platforms": platforms,   # {clip_file: [platform, ...]} from the GUI
             "status": "queued",       # queued | running | done | failed
             "stage": None,            # host | post
             "host": None,             # HostResult as dict
@@ -71,7 +72,10 @@ class PublishManager:
                     host_result = host_source(job["source_id"], cfg)
                     job["host"] = asdict(host_result)
                     job["stage"] = "post"
-                    post_result = post_source(job["source_id"], cfg, schedule=job["schedule"])
+                    post_result = post_source(
+                        job["source_id"], cfg,
+                        schedule=job["schedule"], platforms=job["platforms"],
+                    )
                     job["post"] = asdict(post_result)
                     failed = bool(host_result.failed or post_result.failed)
                 # Per-clip failure strings live in job["host"]/job["post"];
