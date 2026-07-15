@@ -66,18 +66,22 @@ shorts gui
 Opens `http://127.0.0.1:8501` with three pages:
 
 - **Run** — submit a path/URL or upload a file into the inbox; live per-stage
-  job progress (one job renders at a time, the rest queue).
+  job progress (one job renders at a time, the rest queue). The auto-saved
+  **Run options** panel holds the per-run choices: campaign rules (the brand's
+  brief), clips per video, clip length range, zoom effect, caption animation.
 - **Clips** — preview every finished clip in the browser with its title,
   description, and per-platform hashtags. If publishing is enabled, this is also
   where you host + schedule a source to Buffer, refresh connected channels, and
-  retry failed posts. Each clip has per-platform checkboxes (defaulting to
-  `posting.platforms`) — untick to keep a clip off a platform, untick all to
-  skip the clip entirely; already-posted platforms show as status badges
-  instead. Retries only ever touch the exact (clip, platform) pairs that
+  retry failed posts. The auto-saved **Posting options** panel holds draft-only,
+  schedule mode, and spread density; each clip card has per-platform checkboxes
+  (defaulting to `posting.platforms`) — untick to keep a clip off a platform,
+  untick all to skip the clip entirely; already-posted platforms show as status
+  badges instead. Retries only ever touch the exact (clip, platform) pairs that
   failed, so deselected platforms stay deselected.
-- **Settings** — edit everything in `config.yaml` from a form, plus a hardware
-  panel (CPU/RAM/GPU/ffmpeg/API-key detection) with one-click "Apply"
-  recommendations for the right Whisper model and LLM provider. Saving rewrites
+- **Settings** — set-once machine/account configuration in collapsible
+  sections (transcription + LLM + folders, video & captions, publishing
+  defaults, media hosting), plus a hardware panel (CPU/RAM/GPU/ffmpeg/API-key
+  detection) with one-click "Apply" recommendations. Saving rewrites
   `config.yaml` (comments are not preserved); changes apply to the next job.
 
 ## CLI usage

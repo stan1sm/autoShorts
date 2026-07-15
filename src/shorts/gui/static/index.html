@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>shorts-generator</title>
-<link rel="stylesheet" href="/static/style.css?v=7">
+<link rel="stylesheet" href="/static/style.css?v=8">
 </head>
 <body>
 <header>
@@ -44,6 +44,16 @@
     </div>
 
     <div class="card">
+      <div class="row spread">
+        <h2>Run options</h2>
+        <span id="run-options-msg" class="msg inline"></span>
+      </div>
+      <p class="muted">Saved automatically — applies to the next run.
+        Machine-level settings (Whisper model, fonts, hosting…) live in the Settings tab.</p>
+      <form id="run-options"></form>
+    </div>
+
+    <div class="card">
       <h2>Jobs</h2>
       <table id="jobs-table">
         <thead><tr><th>#</th><th>Source</th><th>Status</th><th>Stage</th><th>Clips</th><th>Error</th></tr></thead>
@@ -61,6 +71,15 @@
         <button id="retry-failed">Retry failed posts</button>
         <button id="refresh-clips">Refresh</button>
       </div>
+    </div>
+    <div class="card">
+      <div class="row spread">
+        <h2>Posting options</h2>
+        <span id="post-options-msg" class="msg inline"></span>
+      </div>
+      <p class="muted">Saved automatically — applied when you hit Publish.
+        Pick platforms and times per clip on the cards below.</p>
+      <form id="post-options" class="options-grid"></form>
     </div>
     <div id="clips-msg" class="msg"></div>
     <div id="clips-container"></div>
@@ -100,6 +119,6 @@
   </section>
 </main>
 
-<script src="/static/app.js?v=7"></script>
+<script src="/static/app.js?v=8"></script>
 </body>
 </html>
