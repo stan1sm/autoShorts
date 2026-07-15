@@ -60,6 +60,13 @@ def build_ass(words: list[Word], clip_start: float, cfg: VideoConfig) -> str:
     alignment, margin_v = _POSITIONS[cap.position]
     events: list[str] = []
 
+    # pop: scale in with a slight overshoot (80% -> 110% -> 100% over 150ms).
+    pop = (
+        "{\\fscx80\\fscy80\\t(0,90,\\fscx110\\fscy110)\\t(90,150,\\fscx100\\fscy100)}"
+        if cap.animation == "pop"
+        else ""
+    )
+
     chunks = [
         words[i : i + cap.words_per_caption]
         for i in range(0, len(words), cap.words_per_caption)
@@ -75,7 +82,9 @@ def build_ass(words: list[Word], clip_start: float, cfg: VideoConfig) -> str:
             dur_cs = max(1, round((until - word.start) * 100))
             parts.append(f"{{\\k{dur_cs}}}{word.word}")
         text = " ".join(parts)
-        events.append(f"Dialogue: 0,{_ass_time(start)},{_ass_time(end)},Karaoke,,0,0,0,,{text}")
+        events.append(
+            f"Dialogue: 0,{_ass_time(start)},{_ass_time(end)},Karaoke,,0,0,0,,{pop}{text}"
+        )
 
     return _ASS_TEMPLATE.format(
         width=cfg.output_resolution[0],
@@ -91,12 +100,70 @@ def build_ass(words: list[Word], clip_start: float, cfg: VideoConfig) -> str:
     )
 
 
+def punch_in_cuts(
+    transcript: Transcript, clip_start: float, clip_duration: float
+) -> list[float]:
+    """Clip-relative punch-in cut points: sentence (segment) starts inside the
+    clip, at least 1.5s apart and clear of the clip's edges, capped so the
+    zoompan expression stays a sane length."""
+    cuts: list[float] = []
+    for seg in transcript.segments:
+        t = seg.start - clip_start
+        if t < 0.5 or t > clip_duration - 0.5:
+            continue
+        if cuts and t - cuts[-1] < 1.5:
+            continue
+        cuts.append(round(t, 2))
+        if len(cuts) >= 40:
+            break
+    return cuts
+
+
 def _escape_filter_path(path: Path) -> str:
     """Escape a path for use inside an ffmpeg filter argument (Windows-safe)."""
     return str(path).replace("\\", "/").replace(":", "\\:")
 
 
-def _build_filter(cfg: VideoConfig, ass_path: Path | None) -> str:
+def _zoom_filter(
+    cfg: VideoConfig, clip_duration: float, cut_times: list[float] | None
+) -> str:
+    """zoompan stage for the configured zoom effect ('' when disabled).
+
+    The frame is upscaled by `intensity` first so the crop window never drops
+    below output resolution (no softness at max zoom). The input is already at
+    the target fps, so d=1 keeps frame count and A/V sync intact.
+    """
+    zoom = cfg.effects.zoom
+    w, h = cfg.output_resolution
+    if zoom.mode == "continuous":
+        if clip_duration <= 0:
+            return ""
+        rate = (zoom.intensity - 1.0) / clip_duration
+        zexpr = f"min(1+{rate:.6f}*in_time\\,{zoom.intensity})"
+    elif zoom.mode == "punch_in":
+        if not cut_times:
+            return ""
+        # Alternate 1.0x / intensity: count boundaries passed, take parity.
+        passed = "+".join(f"gte(in_time\\,{t:.2f})" for t in cut_times)
+        zexpr = f"1+{zoom.intensity - 1.0:.4f}*mod({passed}\\,2)"
+    else:
+        return ""
+
+    up_w = -(-int(w * zoom.intensity) // 2) * 2  # even ceil
+    up_h = -(-int(h * zoom.intensity) // 2) * 2
+    return (
+        f",scale={up_w}:{up_h},zoompan=z='{zexpr}'"
+        f":x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
+        f":d=1:s={w}x{h}:fps={cfg.encoding.fps}"
+    )
+
+
+def _build_filter(
+    cfg: VideoConfig,
+    ass_path: Path | None,
+    clip_duration: float = 0.0,
+    cut_times: list[float] | None = None,
+) -> str:
     w, h = cfg.output_resolution
     if cfg.reframe_mode == "subject_tracking":
         raise NotImplementedError(
@@ -109,6 +176,7 @@ def _build_filter(cfg: VideoConfig, ass_path: Path | None) -> str:
         f"[fg]scale={w}:{h}:force_original_aspect_ratio=decrease[fgs];"
         f"[bgb][fgs]overlay=(W-w)/2:(H-h)/2,fps={cfg.encoding.fps}"
     )
+    chain += _zoom_filter(cfg, clip_duration, cut_times)
     if ass_path is not None:
         chain += f",subtitles=filename='{_escape_filter_path(ass_path)}'"
     chain += ",format=yuv420p[v];"
@@ -135,12 +203,16 @@ def render_clip(
             ass_path = work_dir / (out_path.stem + ".ass")
             ass_path.write_text(build_ass(words, candidate.start, cfg), encoding="utf-8")
 
+    cut_times: list[float] | None = None
+    if cfg.effects.zoom.mode == "punch_in":
+        cut_times = punch_in_cuts(transcript, candidate.start, candidate.duration)
+
     cmd = [
         "ffmpeg", "-y", "-v", "error",
         "-ss", f"{candidate.start:.3f}",
         "-t", f"{candidate.duration:.3f}",
         "-i", str(source),
-        "-filter_complex", _build_filter(cfg, ass_path),
+        "-filter_complex", _build_filter(cfg, ass_path, candidate.duration, cut_times),
         "-map", "[v]", "-map", "[a]",
         "-c:v", "libx264", "-preset", "medium", "-profile:v", "high",
         "-b:v", cfg.encoding.bitrate,

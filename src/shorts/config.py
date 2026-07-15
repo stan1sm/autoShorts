@@ -67,6 +67,18 @@ class CaptionsConfig(BaseModel):
     stroke_width: int = 6
     highlight_color: str = "#FFE500"
     base_color: str = "#FFFFFF"
+    animation: Literal["none", "pop"] = "pop"  # pop: caption scales in on appearance
+
+
+class ZoomEffectConfig(BaseModel):
+    # continuous: slow zoom across the whole clip; punch_in: hard cuts between
+    # 1.0x and `intensity` at sentence boundaries.
+    mode: Literal["none", "continuous", "punch_in"] = "none"
+    intensity: float = Field(default=1.12, ge=1.01, le=1.5)
+
+
+class EffectsConfig(BaseModel):
+    zoom: ZoomEffectConfig = ZoomEffectConfig()
 
 
 class AudioConfig(BaseModel):
@@ -83,6 +95,7 @@ class VideoConfig(BaseModel):
     output_resolution: tuple[int, int] = (1080, 1920)
     reframe_mode: Literal["center_crop_blur", "subject_tracking"] = "center_crop_blur"
     captions: CaptionsConfig = CaptionsConfig()
+    effects: EffectsConfig = EffectsConfig()
     audio: AudioConfig = AudioConfig()
     encoding: EncodingConfig = EncodingConfig()
 
