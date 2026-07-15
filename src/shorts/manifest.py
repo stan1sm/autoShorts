@@ -62,6 +62,23 @@ def write_manifest(source: SourceVideo, clips: list[ClipEntry], out_dir: Path) -
     return path
 
 
+def load_manifest_dict(out_dir: Path) -> dict:
+    """Read manifest.json as a plain dict (the HOST/POST stages annotate it
+    with fields the ClipEntry dataclass doesn't know about)."""
+    path = out_dir / "manifest.json"
+    if not path.exists():
+        raise FileNotFoundError(f"no manifest.json in {out_dir} — run the pipeline first")
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_manifest_dict(data: dict, out_dir: Path) -> Path:
+    path = out_dir / "manifest.json"
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return path
+
+
 def write_source_info(source: SourceVideo, out_dir: Path) -> Path:
     info = {
         "source_id": source.source_id,

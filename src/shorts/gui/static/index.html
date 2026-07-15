@@ -4,16 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>shorts-generator</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/style.css?v=4">
 </head>
 <body>
 <header>
-  <h1>shorts<span>-generator</span></h1>
+  <h1><span class="rec-dot" aria-hidden="true"></span>shorts<span class="dim">generator</span></h1>
   <nav>
     <button class="tab active" data-tab="run">Run</button>
     <button class="tab" data-tab="clips">Clips</button>
     <button class="tab" data-tab="settings">Settings</button>
   </nav>
+  <div class="scrubber" aria-hidden="true"><div class="scrubber-fill"></div></div>
 </header>
 
 <main>
@@ -34,6 +35,7 @@
         <button id="submit-file" class="primary" disabled>Upload &amp; start</button>
       </div>
       <label class="check"><input id="force-check" type="checkbox"> Force reprocess (ignore cache)</label>
+      <label class="check"><input id="publish-check" type="checkbox"> Publish to Buffer when done (uses Publishing settings)</label>
       <div id="upload-progress" class="progress" hidden>
         <div class="progress-track"><div id="upload-progress-fill" class="progress-fill"></div></div>
         <span id="upload-progress-label" class="progress-label"></span>
@@ -55,8 +57,12 @@
   <section id="tab-clips" class="panel">
     <div class="row spread">
       <h2>Finished clips</h2>
-      <button id="refresh-clips">Refresh</button>
+      <div class="row">
+        <button id="retry-failed">Retry failed posts</button>
+        <button id="refresh-clips">Refresh</button>
+      </div>
     </div>
+    <div id="clips-msg" class="msg"></div>
     <div id="clips-container"></div>
     <p id="clips-empty" class="muted">Nothing rendered yet — start a job on the Run tab.</p>
   </section>
@@ -73,6 +79,17 @@
 
     <div class="card">
       <div class="row spread">
+        <h2>Buffer channels</h2>
+        <button id="refresh-channels">Refresh from Buffer</button>
+      </div>
+      <p class="muted">Connect channels at <a href="https://publish.buffer.com" target="_blank">publish.buffer.com</a>,
+        then refresh. Only platforms enabled below are posted to.</p>
+      <div id="channels-list"></div>
+      <div id="channels-msg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="row spread">
         <h2>Configuration</h2>
         <button id="save-settings" class="primary">Save settings</button>
       </div>
@@ -83,6 +100,6 @@
   </section>
 </main>
 
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=4"></script>
 </body>
 </html>

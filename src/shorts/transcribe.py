@@ -52,22 +52,28 @@ class Transcript:
         return [w for w in self.words if w.start >= start and w.end <= end]
 
 
-def _transcribe_faster_whisper(path: Path, cfg: TranscriptionConfig, notify=None) -> Transcript:
-    try:
-        from faster_whisper import WhisperModel
-    except ImportError as exc:
-        raise RuntimeError(
-            "`pip install faster-whisper` required for the faster-whisper engine"
-        ) from exc
+def _register_cuda_dll_dirs() -> None:
+    """Make the CUDA runtime DLLs from the `nvidia-*-cu12` pip wheels loadable.
 
-    if notify is not None:
-        notify("loading_model", None)  # first run downloads the model — can take a while
-    # cuda if available, else int8 on CPU (best speed/quality tradeoff there).
-    try:
-        model = WhisperModel(cfg.model, device="cuda", compute_type="float16")
-    except Exception:
-        model = WhisperModel(cfg.model, device="cpu", compute_type="int8")
+    On Windows, CTranslate2 resolves cublas64_12.dll / cudnn DLLs via the OS
+    search path, which does not include site-packages/nvidia/*/bin — so a
+    GPU-capable install still dies with "Library cublas64_12.dll is not found"
+    unless we register those directories first.
+    """
+    if os.name != "nt":
+        return
+    import importlib.util
 
+    spec = importlib.util.find_spec("nvidia")
+    if spec is None or not spec.submodule_search_locations:
+        return
+    for root in spec.submodule_search_locations:
+        for bin_dir in Path(root).glob("*/bin"):
+            os.add_dll_directory(str(bin_dir))
+            os.environ["PATH"] = str(bin_dir) + os.pathsep + os.environ.get("PATH", "")
+
+
+def _run_whisper(model, path: Path, cfg: TranscriptionConfig, notify=None) -> Transcript:
     language = None if cfg.language == "auto" else cfg.language
     seg_iter, info = model.transcribe(str(path), language=language, word_timestamps=True)
 
@@ -84,6 +90,30 @@ def _transcribe_faster_whisper(path: Path, cfg: TranscriptionConfig, notify=None
     return Transcript(
         language=info.language, duration=info.duration, words=words, segments=segments
     )
+
+
+def _transcribe_faster_whisper(path: Path, cfg: TranscriptionConfig, notify=None) -> Transcript:
+    try:
+        from faster_whisper import WhisperModel
+    except ImportError as exc:
+        raise RuntimeError(
+            "`pip install faster-whisper` required for the faster-whisper engine"
+        ) from exc
+
+    _register_cuda_dll_dirs()
+    if notify is not None:
+        notify("loading_model", None)  # first run downloads the model — can take a while
+    # cuda if available, else int8 on CPU (best speed/quality tradeoff there).
+    # The CUDA libraries load lazily at first inference, so the whole run —
+    # not just model construction — must be inside the fallback.
+    model = None
+    try:
+        model = WhisperModel(cfg.model, device="cuda", compute_type="float16")
+        return _run_whisper(model, path, cfg, notify=notify)
+    except Exception:
+        del model  # release any half-initialized GPU state before CPU retry
+        model = WhisperModel(cfg.model, device="cpu", compute_type="int8")
+        return _run_whisper(model, path, cfg, notify=notify)
 
 
 def _transcribe_openai_compatible(

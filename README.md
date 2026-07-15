@@ -2,9 +2,12 @@
 
 Turn long-form video into platform-ready vertical shorts: 1080×1920, burned-in
 karaoke captions, loudness-normalized, with per-platform titles/descriptions/hashtags
-in a `manifest.json` ready for Buffer to pick up.
+in a `manifest.json` — then optionally host the clips and schedule them to
+YouTube / Instagram / TikTok through Buffer.
 
-**Scope:** clip generation only. Posting/scheduling is downstream (Buffer).
+**Scope:** end to end — clip generation *and* publishing. Publishing is opt-in
+(`posting.enabled`, off by default) and defaults to Buffer **drafts** so nothing
+goes live without your say-so.
 
 ## Quickstart
 
@@ -65,7 +68,9 @@ Opens `http://127.0.0.1:8501` with three pages:
 - **Run** — submit a path/URL or upload a file into the inbox; live per-stage
   job progress (one job renders at a time, the rest queue).
 - **Clips** — preview every finished clip in the browser with its title,
-  description, and per-platform hashtags.
+  description, and per-platform hashtags. If publishing is enabled, this is also
+  where you host + schedule a source to Buffer, refresh connected channels, and
+  retry failed posts.
 - **Settings** — edit everything in `config.yaml` from a form, plus a hardware
   panel (CPU/RAM/GPU/ffmpeg/API-key detection) with one-click "Apply"
   recommendations for the right Whisper model and LLM provider. Saving rewrites
@@ -124,13 +129,49 @@ H.264 8Mbps 30fps) → metadata → manifest.
 Each stage caches to disk, so a crash mid-run resumes where it left off. A single
 failed clip doesn't stop the others; failures are summarized at exit (exit code 2).
 
+## Publishing (optional)
+
+Off by default. When `posting.enabled: true`, two extra stages run *after* the
+manifest is written:
+
+**host** → upload each clip to object storage and write a public URL back into
+the manifest. Buffer HEAD-probes media URLs and only accepts publicly readable
+ones, so hosting uses a public bucket (Cloudflare R2's `r2.dev` URL or a custom
+domain); presigned URLs are rejected. Backends: `r2` (default), `s3`, `minio`.
+
+**post** → create one Buffer post per clip per configured platform
+(`youtube` / `instagram` / `tiktok`). Idempotent: a `(clip, platform)` pair that
+already has a Buffer post ID is never posted twice (dedup lives in
+`output/.state.db`). `draft_only: true` (the default) makes every post a Buffer
+draft you approve manually. `schedule_mode` picks the timing: `queue` (Buffer's
+own queue), `spread` (deterministic times across `window_days`, honoring quiet
+hours, per-day caps, and min gaps in `posting.spread.timezone`), or `immediate`.
+
+```powershell
+shorts buffer channels refresh     # cache your connected YouTube/IG/TikTok channels
+shorts publish <source_id>         # host + post one source (add --dry-run to preview)
+shorts host <source_id>            # host only
+shorts post <source_id>            # post only
+shorts posts status <source_id>    # per-clip / per-platform post status
+shorts posts retry-failed          # re-run every failed post
+shorts hosting cleanup             # delete hosted clips past hosting.retention_days
+shorts run video.mp4 --publish     # generate then host + post in one shot
+```
+
+Credentials come from the environment (see `.env.example`): `BUFFER_API_KEY`
+plus the storage keys for your backend (`R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`
+/ `R2_ACCOUNT_ID` for R2). Install the extra deps with `pip install -e ".[posting]"`
+(included in `[all]`).
+
 ## Tests
 
 ```powershell
 pytest
 ```
 
-## Phase 2 (not implemented)
+## Roadmap (not yet implemented)
 
 Subject-tracking reframe (mode is scaffolded in config, raises for now), speaker
-diarization, thumbnails, review UI, direct Buffer push.
+diarization, custom thumbnails, an in-GUI review/approve gate (edit title/hashtags
+and pick which clips to publish before hosting), and pulling Buffer post analytics
+back to inform clip selection.
