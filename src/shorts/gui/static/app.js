@@ -364,6 +364,15 @@ const SETTINGS_SCHEMA = [
     { path: "video.captions.words_per_caption", label: "Words per caption", type: "number", min: 1, max: 4 },
     { path: "video.captions.highlight_color", label: "Highlight color", type: "color" },
     { path: "video.captions.base_color", label: "Base color", type: "color" },
+    { path: "video.captions.animation", label: "Caption animation", type: "select",
+      options: ["pop", "none"] },
+    { path: "video.effects.zoom.mode", label: "Zoom effect", type: "select", options: [
+      { value: "none", label: "none" },
+      { value: "continuous", label: "continuous (slow zoom)" },
+      { value: "punch_in", label: "punch-in (cuts at sentences)" },
+    ]},
+    { path: "video.effects.zoom.intensity", label: "Zoom intensity (1.01–1.5)", type: "number",
+      min: 1.01, max: 1.5, step: 0.01 },
     { path: "video.encoding.fps", label: "FPS", type: "number" },
     { path: "video.encoding.bitrate", label: "Video bitrate", type: "text" },
   ]},
@@ -441,7 +450,8 @@ function fieldInput(f, value) {
     return `<input type="color" data-path="${f.path}" value="${esc(value)}">`;
   if (f.type === "number")
     return `<input type="number" data-path="${f.path}" value="${esc(value)}"
-            ${f.min != null ? `min="${f.min}"` : ""} ${f.max != null ? `max="${f.max}"` : ""}>`;
+            ${f.min != null ? `min="${f.min}"` : ""} ${f.max != null ? `max="${f.max}"` : ""}
+            ${f.step != null ? `step="${f.step}"` : ""}>`;
   return `<input type="text" data-path="${f.path}" value="${esc(value)}">`;
 }
 

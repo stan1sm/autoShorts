@@ -126,6 +126,10 @@ ingest → transcribe (word timestamps) → select (LLM default, heuristic fallb
 → render (cut, 9:16 center-crop-blur reframe, ASS karaoke captions, −14 LUFS,
 H.264 8Mbps 30fps) → metadata → manifest.
 
+Render effects (`video.effects` / caption settings, all optional): caption
+pop-in animation, and a zoom effect — `continuous` (slow push across the clip)
+or `punch_in` (hard 1.0x↔intensity cuts at sentence boundaries).
+
 Each stage caches to disk, so a crash mid-run resumes where it left off. A single
 failed clip doesn't stop the others; failures are summarized at exit (exit code 2).
 
