@@ -17,6 +17,8 @@ class HardwareSpecs:
     has_anthropic_key: bool
     has_openai_key: bool
     has_groq_key: bool
+    has_buffer_key: bool = False
+    has_r2_creds: bool = False
 
 
 def detect_specs() -> HardwareSpecs:
@@ -57,6 +59,11 @@ def detect_specs() -> HardwareSpecs:
         has_anthropic_key=bool(os.environ.get("ANTHROPIC_API_KEY")),
         has_openai_key=bool(os.environ.get("OPENAI_API_KEY")),
         has_groq_key=bool(os.environ.get("GROQ_API_KEY")),
+        has_buffer_key=bool(os.environ.get("BUFFER_API_KEY")),
+        has_r2_creds=all(
+            os.environ.get(v)
+            for v in ("R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_ACCOUNT_ID")
+        ),
     )
 
 

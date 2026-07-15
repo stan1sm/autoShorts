@@ -8,7 +8,7 @@ input:
   min_source_duration_seconds: 180.0
 transcription:
   engine: faster-whisper
-  model: medium
+  model: large-v3
   language: auto
   cache: true
 clip_selection:
@@ -49,3 +49,43 @@ metadata:
   cta: Follow for more.
 output:
   root_dir: output
+hosting:
+  backend: r2
+  bucket: shorts-media
+  region: auto
+  public_mode: public_bucket
+  signed_url_ttl_days: 7
+  retention_days: 90
+  endpoint_url: null
+  public_base_url: https://pub-eadbf1b3b8c64cbebb174aa5773fb754.r2.dev
+posting:
+  enabled: true
+  draft_only: true
+  platforms:
+  - youtube
+  schedule_mode: spread
+  spread:
+    window_days: 7
+    posts_per_day_per_platform: 3
+    min_gap_hours: 4.0
+    same_source_gap_hours: 6.0
+    quiet_hours:
+    - 0
+    - 7
+    timezone: Europe/Oslo
+  instagram:
+    post_type: reel
+    hashtags_in_first_comment: false
+  youtube:
+    ensure_shorts_tag: true
+    category_id: '24'
+    privacy: public
+    made_for_kids: false
+    notify_subscribers: true
+  tiktok:
+    thumbnail_offset_seconds: 1.5
+  retries:
+    max_attempts: 5
+    initial_backoff_seconds: 2.0
+  rate_limit:
+    max_requests_per_15min: 30
