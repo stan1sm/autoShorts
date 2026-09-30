@@ -208,3 +208,7 @@ Subject-tracking reframe (mode is scaffolded in config, raises for now), speaker
 diarization, custom thumbnails, an in-GUI review/approve gate (edit title/hashtags
 and pick which clips to publish before hosting), and pulling Buffer post analytics
 back to inform clip selection.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
