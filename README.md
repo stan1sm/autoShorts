@@ -1,4 +1,8 @@
-# shorts-generator
+# autoShorts
+
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue) ![Status: active development](https://img.shields.io/badge/status-active%20development-yellow)
+
+**Project status:** working end to end and used by the author; still in active development, so expect rough edges. The Python package is named `shorts-generator` (CLI: `shorts`).
 
 Turn long-form video into platform-ready vertical shorts: 1080×1920, burned-in
 karaoke captions, loudness-normalized, with per-platform titles/descriptions/hashtags
@@ -8,6 +12,9 @@ YouTube / Instagram / TikTok through Buffer.
 **Scope:** end to end — clip generation *and* publishing. Publishing is opt-in
 (`posting.enabled`, off by default) and defaults to Buffer **drafts** so nothing
 goes live without your say-so.
+
+<!-- TODO: add screenshots, e.g. docs/gui-run.png and docs/gui-clips.png -->
+
 
 ## Quickstart
 
