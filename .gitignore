@@ -8,3 +8,10 @@ inbox/
 output/
 costs.jsonl
 .env
+node_modules/
+dist/
+
+config.yaml
+.claude/
+*.pyc
+.ruff_cache/

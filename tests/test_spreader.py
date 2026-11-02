@@ -1,6 +1,6 @@
 """Schedule spreader — deterministic given a fixed 'now'."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -9,7 +9,7 @@ from shorts.buffer.posting import immediate_times, spread_times
 from shorts.config import PostingConfig
 
 OSLO = ZoneInfo("Europe/Oslo")
-NOW = datetime(2026, 7, 15, 10, 3, tzinfo=timezone.utc)  # 12:03 Oslo (CEST)
+NOW = datetime(2026, 7, 15, 10, 3, tzinfo=UTC)  # 12:03 Oslo (CEST)
 
 
 def _cfg(**spread_overrides) -> PostingConfig:
@@ -43,7 +43,7 @@ def test_min_gap_is_same_source_gap():
 
 
 def test_respects_quiet_hours():
-    late_now = datetime(2026, 7, 15, 20, 30, tzinfo=timezone.utc)  # 22:30 Oslo
+    late_now = datetime(2026, 7, 15, 20, 30, tzinfo=UTC)  # 22:30 Oslo
     times = spread_times(6, _cfg(), late_now)
     for t in times:
         assert not (0 <= t.astimezone(OSLO).hour < 7)

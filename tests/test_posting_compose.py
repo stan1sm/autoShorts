@@ -1,6 +1,6 @@
 """Per-platform post composition — pure functions, no network."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from shorts.buffer.posting import build_post_input, compose_text
 from shorts.config import PostingConfig
@@ -73,7 +73,7 @@ def test_build_post_input_queue_mode_draft():
 
 def test_build_post_input_custom_scheduled_and_youtube_metadata():
     cfg = PostingConfig.model_validate({"draft_only": False})
-    due = datetime(2026, 8, 1, 12, 30, tzinfo=timezone.utc)
+    due = datetime(2026, 8, 1, 12, 30, tzinfo=UTC)
     post_input = build_post_input(_clip(), "youtube", "ch_yt", "https://x/v.mp4", cfg, due)
     variables = post_input.to_variables()["input"]
     assert variables["mode"] == "customScheduled"

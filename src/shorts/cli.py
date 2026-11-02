@@ -4,7 +4,6 @@ publishing commands (`host`, `post`, `publish`, `buffer`, `posts`, `hosting`).""
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -31,7 +30,7 @@ _DRY_RUN_OPT = typer.Option(False, "--dry-run", help="Show what would happen; no
 
 
 def _overrides(
-    clips: Optional[int], strategy: Optional[str], reframe: Optional[str], engine: Optional[str]
+    clips: int | None, strategy: str | None, reframe: str | None, engine: str | None
 ) -> dict:
     return {
         "clip_selection.clips_per_source": clips,
@@ -46,10 +45,10 @@ def run(
     source: str = typer.Argument(..., help="Video file path or URL (YouTube/Twitch/direct)."),
     config: Path = _CONFIG_OPT,
     force: bool = _FORCE_OPT,
-    clips: Optional[int] = typer.Option(None, help="Override clips per source."),
-    strategy: Optional[str] = typer.Option(None, help="Override selection strategy (llm|heuristic)."),
-    reframe: Optional[str] = typer.Option(None, help="Override reframe mode."),
-    engine: Optional[str] = typer.Option(None, help="Override transcription engine."),
+    clips: int | None = typer.Option(None, help="Override clips per source."),
+    strategy: str | None = typer.Option(None, help="Override selection strategy (llm|heuristic)."),
+    reframe: str | None = typer.Option(None, help="Override reframe mode."),
+    engine: str | None = typer.Option(None, help="Override transcription engine."),
     publish_after: bool = typer.Option(
         False, "--publish", help="Run HOST + POST (Buffer) after clip generation."
     ),
@@ -60,7 +59,7 @@ def run(
         result = run_source(source, cfg, force=force)
     except (IngestError, RuntimeError) as exc:
         typer.secho(f"FAILED: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
     if result.skipped:
         typer.secho(f"[{result.source_id}] already processed — no-op.", fg=typer.colors.YELLOW)
@@ -79,7 +78,7 @@ def run(
 
 @app.command()
 def batch(
-    folder: Optional[Path] = typer.Argument(None, help="Folder to scan (default: inbox_dir from config)."),
+    folder: Path | None = typer.Argument(None, help="Folder to scan (default: inbox_dir from config)."),
     config: Path = _CONFIG_OPT,
     force: bool = _FORCE_OPT,
 ) -> None:
@@ -91,7 +90,7 @@ def batch(
         files = scan_folder(target, cfg.input)
     except IngestError as exc:
         typer.secho(f"FAILED: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
     if not files:
         typer.echo(f"No supported videos in {target}.")
         return
@@ -198,8 +197,8 @@ def publish(
 def channels_refresh(config: Path = _CONFIG_OPT) -> None:
     """Re-query Buffer for connected channels and rebuild the local cache."""
     from .buffer.channels import refresh_channels
-    from .state import StateStore
     from .stages.post import _make_client
+    from .state import StateStore
 
     cfg = load_config(config)
     state = StateStore(cfg.output.root_dir / ".state.db")
@@ -316,7 +315,7 @@ def gui(
         serve(config, host=host, port=port, open_browser=not no_browser)
     except RuntimeError as exc:
         typer.secho(str(exc), fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 
 if __name__ == "__main__":

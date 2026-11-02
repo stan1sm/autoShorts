@@ -11,7 +11,6 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-
 # --- inputs (CreatePostInput and friends) ---
 
 class VideoMetadataInput(BaseModel):

@@ -11,16 +11,15 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from ..config import AppConfig
 from ..buffer.channels import resolve_channels
 from ..buffer.client import BufferAPIError, BufferClient, BufferMutationError
 from ..buffer.posting import build_post_input, immediate_times, spread_times
+from ..config import AppConfig
 from ..manifest import load_manifest_dict, save_manifest_dict
 from ..state import StateStore
 from .host import clip_key
-
 
 _SUPPORTED_PLATFORMS = ("youtube", "instagram", "tiktok")
 
@@ -88,7 +87,7 @@ def post_source(
         bad = [p for p in plist if p not in _SUPPORTED_PLATFORMS]
         if bad:
             raise RuntimeError(f"unsupported platform(s) for {clip_file}: {', '.join(bad)}")
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     chosen_times = _parse_schedule(schedule, now)
 
     def clip_platforms(clip: dict) -> list[str]:

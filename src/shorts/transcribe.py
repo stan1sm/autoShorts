@@ -38,7 +38,7 @@ class Transcript:
             json.dump(asdict(self), f, ensure_ascii=False, indent=1)
 
     @classmethod
-    def from_json(cls, path: Path) -> "Transcript":
+    def from_json(cls, path: Path) -> Transcript:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
         return cls(

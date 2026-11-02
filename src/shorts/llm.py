@@ -117,7 +117,7 @@ def extract_json(text: str) -> Any:
     # Fall back to the first bracketed span that parses, whichever opener
     # appears earliest (so an object containing arrays isn't misread as a list).
     openers = sorted(
-        (p for p in ((text.find(o), o, c) for o, c in (("[", "]"), ("{", "}"))) if p[0] != -1)
+        p for p in ((text.find(o), o, c) for o, c in (("[", "]"), ("{", "}"))) if p[0] != -1
     )
     for start, opener, closer in openers:
         depth = 0

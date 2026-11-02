@@ -13,14 +13,27 @@ from ..state import StateStore
 from .hardware import hardware_report
 from .jobs import JobManager, PublishManager
 
+try:
+    # Imported at module scope (not inside create_app) so that postponed
+    # annotations (`from __future__ import annotations`) resolve `UploadFile`
+    # via this module's globals — a local import here left FastAPI unable to
+    # resolve the `file: UploadFile` param, silently downgrading it to a
+    # query param and breaking uploads with a 422.
+    from fastapi import FastAPI, HTTPException, UploadFile
+    from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
+except ImportError as exc:
+    FastAPI = HTTPException = UploadFile = FileResponse = StaticFiles = None  # type: ignore[assignment]
+    _import_error: ImportError | None = exc
+else:
+    _import_error = None
+
 
 def create_app(config_path: Path):
-    try:
-        from fastapi import FastAPI, HTTPException, UploadFile
-        from fastapi.responses import FileResponse
-        from fastapi.staticfiles import StaticFiles
-    except ImportError as exc:
-        raise RuntimeError('GUI dependencies missing — run: pip install -e ".[gui]"') from exc
+    if _import_error is not None:
+        raise RuntimeError(
+            'GUI dependencies missing — run: pip install -e ".[gui]"'
+        ) from _import_error
 
     app = FastAPI(title="shorts-generator")
 
@@ -55,7 +68,7 @@ def create_app(config_path: Path):
         try:
             cfg = AppConfig.model_validate(body)
         except Exception as exc:
-            raise HTTPException(status_code=422, detail=str(exc))
+            raise HTTPException(status_code=422, detail=str(exc)) from None
         with open(config_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(cfg.model_dump(mode="json"), f, sort_keys=False, allow_unicode=True)
         return {"ok": True}
@@ -102,7 +115,7 @@ def create_app(config_path: Path):
                     source_id, cfg, dry_run=True, schedule=schedule, platforms=platforms
                 )
             except (RuntimeError, ValueError) as exc:
-                raise HTTPException(status_code=422, detail=str(exc))
+                raise HTTPException(status_code=422, detail=str(exc)) from None
             return {"dry_run": True, "host": asdict(host_result), "post": asdict(post_result)}
         return publish_jobs.submit(source_id, schedule=schedule, platforms=platforms)
 
@@ -160,7 +173,7 @@ def create_app(config_path: Path):
             client = _make_client(cfg)
             refresh_channels(state, client)
         except BufferAPIError as exc:
-            raise HTTPException(status_code=502, detail=str(exc))
+            raise HTTPException(status_code=502, detail=str(exc)) from None
         finally:
             state.close()
             if client is not None:

@@ -9,7 +9,7 @@ Credentials come from env vars, never from config:
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from ..config import HostingConfig
@@ -101,7 +101,7 @@ class S3Backend(HostingBackend):
             )
         except Exception as exc:
             raise HostingError(f"presign failed for {key}: {exc}") from exc
-        expires_at = (datetime.now(timezone.utc) + ttl).isoformat()
+        expires_at = (datetime.now(UTC) + ttl).isoformat()
         return url, expires_at
 
     def delete(self, key: str) -> None:

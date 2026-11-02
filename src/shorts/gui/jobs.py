@@ -6,7 +6,7 @@ from __future__ import annotations
 import itertools
 import threading
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from queue import Queue
 
@@ -40,7 +40,7 @@ class PublishManager:
             "host": None,             # HostResult as dict
             "post": None,             # PostResult as dict (or list for retries)
             "error": None,
-            "submitted_at": datetime.now(timezone.utc).isoformat(),
+            "submitted_at": datetime.now(UTC).isoformat(),
         }
         with self._lock:
             self._jobs[job["id"]] = job
@@ -112,7 +112,7 @@ class JobManager:
             "clips": 0,
             "clips_total": None,
             "error": None,
-            "submitted_at": datetime.now(timezone.utc).isoformat(),
+            "submitted_at": datetime.now(UTC).isoformat(),
         }
         with self._lock:
             self._jobs[job["id"]] = job

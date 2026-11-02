@@ -8,7 +8,7 @@ leaves the manifest with a fresh, valid URL.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from ..config import AppConfig
@@ -68,7 +68,7 @@ def host_source(source_id: str, cfg: AppConfig, dry_run: bool = False) -> HostRe
 
             state.upsert_hosted(key, hosted.url, hosted.expires_at, file_hash)
             clip["hosted_url"] = hosted.url
-            clip["hosted_at"] = datetime.now(timezone.utc).isoformat()
+            clip["hosted_at"] = datetime.now(UTC).isoformat()
             if hosted.expires_at:
                 clip["hosted_expires_at"] = hosted.expires_at
             if hosted.uploaded:
@@ -86,7 +86,7 @@ def host_source(source_id: str, cfg: AppConfig, dry_run: bool = False) -> HostRe
 def cleanup_hosted(cfg: AppConfig, dry_run: bool = False) -> list[str]:
     """Delete hosted objects older than hosting.retention_days, unless a post
     for that clip is still pending. Returns the clip keys removed."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=cfg.hosting.retention_days)
+    cutoff = datetime.now(UTC) - timedelta(days=cfg.hosting.retention_days)
     state = StateStore(cfg.output.root_dir / ".state.db")
     backend = None if dry_run else get_backend(cfg.hosting)
     removed: list[str] = []

@@ -1,7 +1,7 @@
 """HOST stage with an in-memory backend: write-back, idempotency, cleanup."""
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -99,7 +99,7 @@ def test_cleanup_removes_only_old_clips_without_pending_posts(cfg, backend):
 
     # Age one clip past retention; give the other a pending post.
     state = StateStore(cfg.output.root_dir / ".state.db")
-    old = (datetime.now(timezone.utc) - timedelta(days=120)).isoformat()
+    old = (datetime.now(UTC) - timedelta(days=120)).isoformat()
     key1 = f"{SOURCE_ID}/clips/{SOURCE_ID}_01_x.mp4"
     key2 = f"{SOURCE_ID}/clips/{SOURCE_ID}_02_x.mp4"
     state._conn.execute("UPDATE hosted_media SET hosted_at = ?", (old,))

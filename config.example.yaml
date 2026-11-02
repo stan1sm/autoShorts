@@ -1,0 +1,103 @@
+# Copy to config.yaml and edit (or just use the GUI Settings tab, which writes config.yaml).
+# Every key is optional; omitted keys use the defaults shown here.
+input:
+  inbox_dir: inbox
+  supported_formats:
+  - mp4
+  - mov
+  - mkv
+  - webm
+  min_source_duration_seconds: 180.0
+transcription:
+  engine: faster-whisper
+  model: large-v3
+  language: auto
+  cache: true
+clip_selection:
+  strategy: llm
+  llm_provider: anthropic
+  llm_model: claude-sonnet-4-6
+  clips_per_source: 5
+  min_clip_seconds: 20.0
+  max_clip_seconds: 50.0
+  min_gap_between_clips_seconds: 30.0
+  pre_roll_seconds: 0.3
+  post_roll_seconds: 0.5
+  keywords: []
+video:
+  output_resolution:
+  - 1080
+  - 1920
+  reframe_mode: center_crop_blur
+  captions:
+    enabled: true
+    style: karaoke
+    font: Inter-Bold
+    font_size: 72
+    position: bottom_third
+    words_per_caption: 2
+    stroke_width: 6
+    highlight_color: '#FFE500'
+    base_color: '#FFFFFF'
+    animation: pop
+  effects:
+    zoom:
+      mode: none
+      intensity: 1.12
+  audio:
+    normalize_lufs: -14.0
+  encoding:
+    codec: h264
+    bitrate: 8M
+    fps: 30
+metadata:
+  llm_provider: anthropic
+  llm_model: claude-sonnet-4-6
+  cta: ''
+campaign:
+  rules: ''
+  watermark_text: ''
+output:
+  root_dir: output
+hosting:
+  backend: r2
+  bucket: shorts-media
+  region: auto
+  public_mode: signed_url
+  signed_url_ttl_days: 7
+  retention_days: 90
+  endpoint_url: null
+  public_base_url: null
+posting:
+  enabled: false
+  draft_only: true
+  platforms:
+  - youtube
+  - instagram
+  - tiktok
+  schedule_mode: queue
+  spread:
+    window_days: 7
+    posts_per_day_per_platform: 2
+    min_gap_hours: 4.0
+    same_source_gap_hours: 12.0
+    quiet_hours:
+    - 0
+    - 7
+    timezone: Europe/Oslo
+  instagram:
+    post_type: reel
+    hashtags_in_first_comment: false
+  youtube:
+    ensure_shorts_tag: true
+    category_id: '24'
+    privacy: public
+    made_for_kids: false
+    notify_subscribers: true
+  tiktok:
+    thumbnail_offset_seconds: null
+  retries:
+    max_attempts: 5
+    initial_backoff_seconds: 2.0
+  rate_limit:
+    max_requests_per_15min: 30

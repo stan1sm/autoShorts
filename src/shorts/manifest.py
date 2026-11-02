@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .ingest import SourceVideo
@@ -53,7 +53,7 @@ def write_manifest(source: SourceVideo, clips: list[ClipEntry], out_dir: Path) -
     manifest = Manifest(
         source_id=source.source_id,
         source_file=source.original_input,
-        processed_at=datetime.now(timezone.utc).isoformat(),
+        processed_at=datetime.now(UTC).isoformat(),
         clips=clips,
     )
     path = out_dir / "manifest.json"
@@ -86,7 +86,7 @@ def write_source_info(source: SourceVideo, out_dir: Path) -> Path:
         "source_file": str(source.path),
         "original_input": source.original_input,
         "duration_seconds": round(source.duration_seconds, 3),
-        "processed_at": datetime.now(timezone.utc).isoformat(),
+        "processed_at": datetime.now(UTC).isoformat(),
     }
     path = out_dir / "source_info.json"
     with open(path, "w", encoding="utf-8") as f:

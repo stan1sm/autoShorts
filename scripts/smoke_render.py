@@ -1,5 +1,5 @@
 """Manual smoke test: renders a real captioned clip from a synthetic source.
-Needs ffmpeg on PATH. Run: python tests/smoke_render.py <source> <outdir>"""
+Needs ffmpeg on PATH. Run: python scripts/smoke_render.py <source> <outdir>"""
 
 import json
 import sys

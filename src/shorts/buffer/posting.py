@@ -6,7 +6,7 @@ arguments — so it is unit-testable and deterministic.
 
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from ..config import PostingConfig
@@ -107,7 +107,7 @@ def build_post_input(
 
 
 def _iso_utc(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 # --- spread scheduling ---
@@ -175,5 +175,5 @@ def spread_times(n: int, cfg: PostingConfig, now: datetime) -> list[datetime]:
 
 def immediate_times(n: int, now: datetime) -> list[datetime]:
     """All posts within the next 15 minutes, staggered by 2 minutes."""
-    base = now.astimezone(timezone.utc) + timedelta(minutes=5)
+    base = now.astimezone(UTC) + timedelta(minutes=5)
     return [base + timedelta(minutes=2 * i) for i in range(n)]

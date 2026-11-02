@@ -1,11 +1,12 @@
 """POST stage end-to-end against a mocked Buffer GraphQL endpoint."""
 
 import json
+from datetime import UTC
 
 import pytest
 
-from shorts.config import AppConfig
 from shorts.buffer.client import BufferClient
+from shorts.config import AppConfig
 from shorts.stages.post import post_source, retry_failed
 
 SOURCE_ID = "src1"
@@ -166,7 +167,7 @@ def test_immediate_plus_draft_only_is_rejected(cfg):
 
 
 def test_operator_schedule_overrides_queue_mode(cfg):
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     clip_file = f"clips/{SOURCE_ID}_01_x.mp4"
     picked = "2030-08-01T14:00"  # naive local time, as the GUI sends it
@@ -174,7 +175,7 @@ def test_operator_schedule_overrides_queue_mode(cfg):
     post_source(SOURCE_ID, cfg, client=_client(fake), schedule={clip_file: picked})
 
     expected = (datetime.fromisoformat(picked).astimezone()
-                .astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"))
+                .astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"))
     by_clip = {}
     for i in fake.create_post_inputs:
         by_clip.setdefault(i["assets"][0]["video"]["url"], []).append(i)
@@ -231,10 +232,10 @@ def test_unknown_platform_is_rejected(cfg):
 def test_spread_slots_are_per_platform(cfg):
     """A platform chosen by only some clips fills its earliest spread slots —
     no gaps from clips that deselected it."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     cfg.posting.schedule_mode = "spread"
-    now = datetime(2030, 8, 1, 10, 0, tzinfo=timezone.utc)
+    now = datetime(2030, 8, 1, 10, 0, tzinfo=UTC)
     result = post_source(SOURCE_ID, cfg, dry_run=True, now=now,
                          platforms={CLIP1: ["youtube"], CLIP2: ["youtube", "tiktok"]})
     due = {(e["clip"], e["platform"]): e["input"]["dueAt"] for e in result.dry_run_inputs}

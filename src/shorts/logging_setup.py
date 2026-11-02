@@ -6,7 +6,7 @@ import json
 import sys
 import time
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,7 +22,7 @@ class SourceLogger:
 
     def log(self, event: str, level: str = "info", **fields: Any) -> None:
         record = {
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "level": level,
             "source_id": self.source_id,
             "event": event,
