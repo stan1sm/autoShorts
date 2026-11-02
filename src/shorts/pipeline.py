@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .config import AppConfig
-from .ingest import SourceVideo, resolve_input
+from .ingest import resolve_input
 from .llm import LLMProvider, LLMResponse, get_provider
 from .logging_setup import SourceLogger
 from .manifest import ClipEntry, make_clip_entry, write_manifest, write_source_info
@@ -39,7 +39,7 @@ class RunResult:
 
 def _log_cost(costs_path: Path, source_id: str, stage: str, response: LLMResponse) -> None:
     entry = {
-        "ts": datetime.now(timezone.utc).isoformat(),
+        "ts": datetime.now(UTC).isoformat(),
         "source_id": source_id,
         "stage": stage,
         "provider": response.provider,
@@ -158,7 +158,10 @@ def run_source(raw_input: str, cfg: AppConfig, force: bool = False, on_event=Non
                     logger.log(f"render.{clip_label}.cache_hit", file=clip_file.name)
                 else:
                     with logger.stage(f"render.{clip_label}", start=cand.start, end=cand.end):
-                        render_clip(source.path, cand, transcript, cfg.video, clip_file, work_dir)
+                        render_clip(
+                            source.path, cand, transcript, cfg.video, clip_file, work_dir,
+                            watermark_text=cfg.campaign.watermark_text,
+                        )
 
                 entries.append(make_clip_entry(f"clips/{clip_file.name}", cand, meta))
             except Exception as exc:

@@ -1,0 +1,13 @@
+{
+  "name": "shorts-generator-desktop",
+  "version": "0.1.0",
+  "description": "Desktop shell for shorts-generator — spawns the local FastAPI backend and displays the GUI.",
+  "private": true,
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^31.3.1"
+  }
+}

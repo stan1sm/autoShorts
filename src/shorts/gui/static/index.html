@@ -4,121 +4,247 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>shorts-generator</title>
-<link rel="stylesheet" href="/static/style.css?v=8">
+<link rel="stylesheet" href="/static/style.css?v=10">
 </head>
 <body>
-<header>
-  <h1><span class="rec-dot" aria-hidden="true"></span>shorts<span class="dim">generator</span></h1>
-  <nav>
-    <button class="tab active" data-tab="run">Run</button>
-    <button class="tab" data-tab="clips">Clips</button>
-    <button class="tab" data-tab="settings">Settings</button>
-  </nav>
-  <div class="scrubber" aria-hidden="true"><div class="scrubber-fill"></div></div>
-</header>
+<div class="app-shell">
 
-<main>
-  <!-- ============ RUN ============ -->
-  <section id="tab-run" class="panel active">
-    <div class="card">
-      <h2>New job</h2>
-      <div class="row">
-        <input id="source-input" type="text"
-               placeholder="Video path (C:\...\video.mp4) or URL (YouTube / Twitch / direct mp4)">
-        <button id="submit-source" class="primary">Start</button>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#06120d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
       </div>
-      <div class="row">
-        <label class="file-label">
-          <input id="file-input" type="file" accept="video/mp4,video/quicktime,video/x-matroska,video/webm">
-          <span id="file-name">…or choose a file to upload into the inbox</span>
-        </label>
-        <button id="submit-file" class="primary" disabled>Upload &amp; start</button>
-      </div>
-      <label class="check"><input id="force-check" type="checkbox"> Force reprocess (ignore cache)</label>
-      <label class="check"><input id="publish-check" type="checkbox"> Publish to Buffer when done (uses Publishing settings)</label>
-      <div id="upload-progress" class="progress" hidden>
-        <div class="progress-track"><div id="upload-progress-fill" class="progress-fill"></div></div>
-        <span id="upload-progress-label" class="progress-label"></span>
-      </div>
-      <div id="run-msg" class="msg"></div>
+      <div class="brand-text">shorts<span>gen</span></div>
     </div>
 
-    <div class="card">
-      <div class="row spread">
-        <h2>Run options</h2>
-        <span id="run-options-msg" class="msg inline"></span>
+    <nav class="side-nav">
+      <div class="nav-group-label">Main</div>
+      <button class="nav-item active" data-tab="home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9"/></svg>
+        Home
+      </button>
+      <button class="nav-item" data-tab="run">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>
+        New job
+      </button>
+      <button class="nav-item" data-tab="clips">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.4"/><path d="M8 4.5v15M16 4.5v15M3.5 9.5h4M3.5 14.5h4M16.5 9.5h4M16.5 14.5h4"/></svg>
+        Clips
+      </button>
+      <div class="nav-group-label">System</div>
+      <button class="nav-item" data-tab="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="foot-card">
+        <div class="foot-card-title">Publishing</div>
+        <div class="foot-card-status" id="buffer-foot-status"><span class="dot muted"></span>checking…</div>
+        <a class="foot-card-btn" href="https://publish.buffer.com" target="_blank" rel="noopener">Open Buffer</a>
       </div>
-      <p class="muted">Saved automatically — applies to the next run.
-        Machine-level settings (Whisper model, fonts, hosting…) live in the Settings tab.</p>
-      <form id="run-options"></form>
+      <div class="app-version"><span class="rec-dot" id="rec-dot-foot" aria-hidden="true"></span>shorts-generator</div>
     </div>
+  </aside>
 
-    <div class="card">
-      <h2>Jobs</h2>
-      <table id="jobs-table">
-        <thead><tr><th>#</th><th>Source</th><th>Status</th><th>Stage</th><th>Clips</th><th>Error</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <p id="jobs-empty" class="muted">No jobs yet.</p>
-    </div>
-  </section>
-
-  <!-- ============ CLIPS ============ -->
-  <section id="tab-clips" class="panel">
-    <div class="row spread">
-      <h2>Finished clips</h2>
-      <div class="row">
-        <button id="retry-failed">Retry failed posts</button>
-        <button id="refresh-clips">Refresh</button>
+  <div class="main-col">
+    <header class="topbar">
+      <div class="topbar-title">
+        <div class="eyebrow">shorts-generator</div>
+        <h1 id="section-title">Home</h1>
       </div>
-    </div>
-    <div class="card">
-      <div class="row spread">
-        <h2>Posting options</h2>
-        <span id="post-options-msg" class="msg inline"></span>
+      <div class="topbar-right">
+        <span class="status-pill" id="backend-status"><span class="dot ok"></span>Backend online</span>
+        <div class="avatar">S</div>
       </div>
-      <p class="muted">Saved automatically — applied when you hit Publish.
-        Pick platforms and times per clip on the cards below.</p>
-      <form id="post-options" class="options-grid"></form>
-    </div>
-    <div id="clips-msg" class="msg"></div>
-    <div id="clips-container"></div>
-    <p id="clips-empty" class="muted">Nothing rendered yet — start a job on the Run tab.</p>
-  </section>
+      <div class="scrubber" aria-hidden="true"><div class="scrubber-fill"></div></div>
+    </header>
 
-  <!-- ============ SETTINGS ============ -->
-  <section id="tab-settings" class="panel">
-    <div class="card" id="hw-card">
-      <h2>Your hardware</h2>
-      <div id="hw-specs" class="specs"></div>
-      <h3>Recommendations</h3>
-      <div id="hw-recs"></div>
-      <div id="hw-warnings"></div>
-    </div>
+    <main>
+      <!-- ============ HOME ============ -->
+      <section id="tab-home" class="panel active">
+        <div class="grid-dashboard">
+          <div class="card card-welcome">
+            <div class="eyebrow">Welcome back</div>
+            <h2 class="welcome-heading">shorts<span class="dim">generator</span></h2>
+            <ul class="status-list" id="home-status-list"></ul>
+            <button class="ghost-link" data-goto="settings">Settings
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+            </button>
+          </div>
 
-    <div class="card">
-      <div class="row spread">
-        <h2>Buffer channels</h2>
-        <button id="refresh-channels">Refresh from Buffer</button>
-      </div>
-      <p class="muted">Connect channels at <a href="https://publish.buffer.com" target="_blank">publish.buffer.com</a>,
-        then refresh. Only platforms enabled below are posted to.</p>
-      <div id="channels-list"></div>
-      <div id="channels-msg" class="msg"></div>
-    </div>
+          <div class="card card-stat" id="stat-jobs">
+            <h3>Jobs</h3>
+            <div class="stat-body">
+              <div class="gauge">
+                <svg viewBox="0 0 84 84">
+                  <circle class="gauge-bg" cx="42" cy="42" r="34"/>
+                  <circle class="gauge-fill" id="gauge-jobs-fill" cx="42" cy="42" r="34" transform="rotate(-90 42 42)"/>
+                </svg>
+                <div class="gauge-label"><span id="gauge-jobs-value">0%</span><small>done</small></div>
+              </div>
+              <div class="stat-side">
+                <div class="stat-row"><span class="dot run"></span>Running <b id="jobs-running">0</b></div>
+                <div class="stat-row"><span class="dot ok"></span>Done <b id="jobs-done">0</b></div>
+                <div class="stat-row"><span class="dot err"></span>Failed <b id="jobs-failed">0</b></div>
+              </div>
+            </div>
+          </div>
 
-    <div class="card">
-      <div class="row spread">
-        <h2>Configuration</h2>
-        <button id="save-settings" class="primary">Save settings</button>
-      </div>
-      <p class="muted">Saved to <code>config.yaml</code>. Changes apply to the next job — no restart needed.</p>
-      <form id="settings-form"></form>
-      <div id="settings-msg" class="msg"></div>
-    </div>
-  </section>
-</main>
+          <div class="card card-stat" id="stat-clips">
+            <h3>Clips</h3>
+            <div class="stat-body">
+              <div class="gauge">
+                <svg viewBox="0 0 84 84">
+                  <circle class="gauge-bg" cx="42" cy="42" r="34"/>
+                  <circle class="gauge-fill accent-cyan" id="gauge-clips-fill" cx="42" cy="42" r="34" transform="rotate(-90 42 42)"/>
+                </svg>
+                <div class="gauge-label"><span id="gauge-clips-value">0%</span><small>posted</small></div>
+              </div>
+              <div class="stat-side">
+                <div class="stat-row"><span class="dot cyan"></span>Published <b id="clips-published">0</b></div>
+                <div class="stat-row"><span class="dot muted"></span>Total <b id="clips-total">0</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-<script src="/static/app.js?v=8"></script>
+        <div class="grid-3">
+          <div class="card">
+            <div class="row spread"><h3>Hardware</h3><span class="badge" id="hw-summary-badge">…</span></div>
+            <div class="mini-specs" id="home-hw-specs"></div>
+            <button class="text-link" data-goto="settings">Review specs &amp; recommendations
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+            </button>
+          </div>
+          <div class="card">
+            <div class="row spread"><h3>Optimization</h3><span class="badge" id="optimize-badge">…</span></div>
+            <p class="muted small">Apply every hardware recommendation in one click.</p>
+            <button class="primary full" id="apply-all-recs">Optimize now</button>
+            <div class="msg inline" id="optimize-msg"></div>
+          </div>
+          <div class="card">
+            <div class="row spread"><h3>Recent jobs</h3></div>
+            <div id="home-recent-jobs" class="recent-list"></div>
+            <button class="text-link" data-goto="run">View all jobs
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row spread"><h3>Publishing settings</h3><span class="msg inline" id="home-posting-msg"></span></div>
+          <div class="toggle-grid" id="home-posting-toggles"></div>
+          <button class="text-link" data-goto="settings">All settings
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- ============ RUN ============ -->
+      <section id="tab-run" class="panel">
+        <div class="card">
+          <h2>New job</h2>
+          <div class="row">
+            <input id="source-input" type="text"
+                   placeholder="Video path (C:\...\video.mp4) or URL (YouTube / Twitch / direct mp4)">
+            <button id="submit-source" class="primary">Start</button>
+          </div>
+          <div class="row">
+            <label class="file-label">
+              <input id="file-input" type="file" accept="video/mp4,video/quicktime,video/x-matroska,video/webm">
+              <span id="file-name">…or choose a file to upload into the inbox</span>
+            </label>
+            <button id="submit-file" class="primary" disabled>Upload &amp; start</button>
+          </div>
+          <label class="check"><input id="force-check" type="checkbox"> Force reprocess (ignore cache)</label>
+          <label class="check"><input id="publish-check" type="checkbox"> Publish to Buffer when done (uses Publishing settings)</label>
+          <div id="upload-progress" class="progress" hidden>
+            <div class="progress-track"><div id="upload-progress-fill" class="progress-fill"></div></div>
+            <span id="upload-progress-label" class="progress-label"></span>
+          </div>
+          <div id="run-msg" class="msg"></div>
+        </div>
+
+        <div class="card">
+          <div class="row spread">
+            <h2>Run options</h2>
+            <span id="run-options-msg" class="msg inline"></span>
+          </div>
+          <p class="muted">Saved automatically — applies to the next run.
+            Machine-level settings (Whisper model, fonts, hosting…) live in the Settings tab.</p>
+          <form id="run-options"></form>
+        </div>
+
+        <div class="card">
+          <h2>Jobs</h2>
+          <table id="jobs-table">
+            <thead><tr><th>#</th><th>Source</th><th>Status</th><th>Stage</th><th>Clips</th><th>Error</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <p id="jobs-empty" class="muted">No jobs yet.</p>
+        </div>
+      </section>
+
+      <!-- ============ CLIPS ============ -->
+      <section id="tab-clips" class="panel">
+        <div class="row spread">
+          <h2>Finished clips</h2>
+          <div class="row">
+            <button id="retry-failed">Retry failed posts</button>
+            <button id="refresh-clips">Refresh</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row spread">
+            <h2>Posting options</h2>
+            <span id="post-options-msg" class="msg inline"></span>
+          </div>
+          <p class="muted">Saved automatically — applied when you hit Publish.
+            Pick platforms and times per clip on the cards below.</p>
+          <form id="post-options" class="options-grid"></form>
+        </div>
+        <div id="clips-msg" class="msg"></div>
+        <div id="clips-container"></div>
+        <p id="clips-empty" class="muted">Nothing rendered yet — start a job on the Run tab.</p>
+      </section>
+
+      <!-- ============ SETTINGS ============ -->
+      <section id="tab-settings" class="panel">
+        <div class="card" id="hw-card">
+          <h2>Your hardware</h2>
+          <div id="hw-specs" class="specs"></div>
+          <h3>Recommendations</h3>
+          <div id="hw-recs"></div>
+          <div id="hw-warnings"></div>
+        </div>
+
+        <div class="card">
+          <div class="row spread">
+            <h2>Buffer channels</h2>
+            <button id="refresh-channels">Refresh from Buffer</button>
+          </div>
+          <p class="muted">Connect channels at <a href="https://publish.buffer.com" target="_blank">publish.buffer.com</a>,
+            then refresh. Only platforms enabled below are posted to.</p>
+          <div id="channels-list"></div>
+          <div id="channels-msg" class="msg"></div>
+        </div>
+
+        <div class="card">
+          <div class="row spread">
+            <h2>Configuration</h2>
+            <button id="save-settings" class="primary">Save settings</button>
+          </div>
+          <p class="muted">Saved to <code>config.yaml</code>. Changes apply to the next job — no restart needed.</p>
+          <form id="settings-form"></form>
+          <div id="settings-msg" class="msg"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="/static/app.js?v=10"></script>
 </body>
 </html>

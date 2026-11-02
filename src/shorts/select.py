@@ -40,6 +40,8 @@ _USER_PROMPT = """Below is a transcript with segment timestamps (seconds).
 
 {rules_block}Select up to {n} non-overlapping clips, each between {min_s:.0f} and {max_s:.0f} seconds long,
 with at least {gap:.0f} seconds between selected clips.
+The {min_s:.0f}-{max_s:.0f}s duration is a hard requirement, not a suggestion — a clip outside that
+range is unusable and will be discarded, so trim start/end to fit even if it cuts off part of a thought.
 
 Return a JSON array of objects with exactly these keys:
 - "start": number (seconds)
@@ -77,11 +79,16 @@ def llm_select(
     transcript: Transcript, cfg: ClipSelectionConfig, provider: LLMProvider,
     campaign_rules: str = "",
 ) -> tuple[list[ClipCandidate], object]:
-    """Ask the LLM for candidates. Returns (candidates, LLMResponse for cost logging)."""
+    """Ask the LLM for candidates. Returns (candidates, LLMResponse for cost logging).
+
+    Requests more candidates than `clips_per_source` — the LLM doesn't reliably
+    respect the duration/gap bounds, and finalize_candidates() hard-rejects
+    anything outside them, so asking for exactly N tends to under-deliver.
+    """
     rules = campaign_rules.strip()
     prompt = _USER_PROMPT.format(
         rules_block=_RULES_BLOCK.format(rules=rules) if rules else "",
-        n=cfg.clips_per_source,
+        n=cfg.clips_per_source + 4,
         min_s=cfg.min_clip_seconds,
         max_s=cfg.max_clip_seconds,
         gap=cfg.min_gap_between_clips_seconds,

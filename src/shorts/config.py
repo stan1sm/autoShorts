@@ -178,6 +178,11 @@ class CampaignConfig(BaseModel):
     # into the clip-selection and metadata LLM prompts. Typical content: what
     # the clips must focus on, mandatory hashtags, per-platform @mentions, CTA.
     rules: str = ""
+    # Text (e.g. "@handle") burned into the top-left corner of every clip for
+    # its full duration. Some platforms require an on-screen tag/logo to be
+    # visible at all times for monetization — set this when the campaign's
+    # rules require it. Empty = no overlay.
+    watermark_text: str = ""
 
 
 class AppConfig(BaseModel):

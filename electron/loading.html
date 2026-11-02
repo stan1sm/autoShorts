@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>shorts-generator</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: #0a0b0f; color: #f1f5f9;
+    font: 14px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wrap { text-align: center; }
+  .mark {
+    width: 46px; height: 46px; margin: 0 auto 18px; border-radius: 13px;
+    background: linear-gradient(135deg, #34d399, #22c1a6);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 32px 4px #34d39944;
+  }
+  .mark svg { width: 22px; height: 22px; }
+  .ring {
+    width: 26px; height: 26px; margin: 0 auto 16px;
+    border-radius: 50%; border: 2.5px solid #232634; border-top-color: #34d399;
+    animation: spin 0.85s linear infinite;
+  }
+  h1 { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 4px; }
+  p { color: #7c8496; font-size: 0.83rem; margin: 0; }
+  .err { display: none; color: #fb7185; margin-top: 10px; font-size: 0.8rem; max-width: 320px; }
+  body.error .ring { display: none; }
+  body.error .err { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#06120d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+      </svg>
+    </div>
+    <div class="ring"></div>
+    <h1>Starting shorts&#8209;generator&hellip;</h1>
+    <p>Booting the local engine, this only takes a moment.</p>
+    <p class="err">Backend didn&rsquo;t start in time. Check the terminal running this app for errors, then relaunch.</p>
+  </div>
+  <script>
+    if (new URLSearchParams(location.search).get("error")) document.body.classList.add("error");
+  </script>
+</body>
+</html>

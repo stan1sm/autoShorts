@@ -25,10 +25,15 @@ ScaledBorderAndShadow: yes
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Karaoke,{font},{font_size},{highlight},{base},&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,{stroke},2,{alignment},60,60,{margin_v},1
+Style: Watermark,{font},{wm_font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,3,0,0,7,24,24,24,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 {events}"""
+
+# Watermark font size as a fraction of caption font size — small "channel bug"
+# badge, not competing with the karaoke captions for attention.
+_WATERMARK_FONT_RATIO = 0.4
 
 # ASS alignment (numpad layout) + vertical margin per configured position.
 _POSITIONS = {
@@ -53,12 +58,25 @@ def _ass_time(seconds: float) -> str:
     return f"{h}:{m:02d}:{s:05.2f}"
 
 
-def build_ass(words: list[Word], clip_start: float, cfg: VideoConfig) -> str:
-    """Karaoke ASS for one clip. Word times are source-absolute; the output is
-    clip-relative (the render seeks to clip_start first)."""
+def build_ass(
+    words: list[Word],
+    clip_start: float,
+    cfg: VideoConfig,
+    clip_duration: float = 0.0,
+    watermark_text: str = "",
+) -> str:
+    """Karaoke (+ optional watermark) ASS for one clip. Word times are
+    source-absolute; the output is clip-relative (the render seeks to
+    clip_start first)."""
     cap = cfg.captions
     alignment, margin_v = _POSITIONS[cap.position]
     events: list[str] = []
+
+    if watermark_text:
+        text = watermark_text.replace("{", "(").replace("}", ")")
+        events.append(
+            f"Dialogue: 0,{_ass_time(0)},{_ass_time(clip_duration)},Watermark,,0,0,0,,{text}"
+        )
 
     # pop: scale in with a slight overshoot (80% -> 110% -> 100% over 150ms).
     pop = (
@@ -91,6 +109,7 @@ def build_ass(words: list[Word], clip_start: float, cfg: VideoConfig) -> str:
         height=cfg.output_resolution[1],
         font=cap.font,
         font_size=cap.font_size,
+        wm_font_size=max(12, round(cap.font_size * _WATERMARK_FONT_RATIO)),
         highlight=_hex_to_ass_color(cap.highlight_color),
         base=_hex_to_ass_color(cap.base_color),
         stroke=cap.stroke_width,
@@ -191,17 +210,23 @@ def render_clip(
     cfg: VideoConfig,
     out_path: Path,
     work_dir: Path,
+    watermark_text: str = "",
 ) -> Path:
     """Render one finished vertical clip; returns out_path."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
 
-    ass_path: Path | None = None
+    words: list[Word] = []
     if cfg.captions.enabled:
         words = transcript.words_between(candidate.start, candidate.end)
-        if words:
-            ass_path = work_dir / (out_path.stem + ".ass")
-            ass_path.write_text(build_ass(words, candidate.start, cfg), encoding="utf-8")
+
+    ass_path: Path | None = None
+    if words or watermark_text:
+        ass_path = work_dir / (out_path.stem + ".ass")
+        ass_path.write_text(
+            build_ass(words, candidate.start, cfg, candidate.duration, watermark_text),
+            encoding="utf-8",
+        )
 
     cut_times: list[float] | None = None
     if cfg.effects.zoom.mode == "punch_in":
