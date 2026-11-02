@@ -22,14 +22,10 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 // ---------- nav ----------
-const SECTION_TITLES = { home: "Home", run: "New job", clips: "Clips", settings: "Settings" };
 
 function navigateTo(tab) {
   document.querySelectorAll(".nav-item").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "tab-" + tab));
-  const title = $("#section-title");
-  if (title) title.textContent = SECTION_TITLES[tab] || tab;
-  if (tab === "home") loadHome();
   if (tab === "run") loadRunOptions();
   if (tab === "clips") { loadClips(); loadPostingOptions(); }
   if (tab === "settings") { loadSettings(); loadHardware(); loadChannels(); }
@@ -37,9 +33,6 @@ function navigateTo(tab) {
 
 document.querySelectorAll(".nav-item").forEach((btn) => {
   btn.addEventListener("click", () => navigateTo(btn.dataset.tab));
-});
-document.querySelectorAll("[data-goto]").forEach((btn) => {
-  btn.addEventListener("click", () => navigateTo(btn.dataset.goto));
 });
 
 // ---------- run tab ----------
@@ -164,7 +157,6 @@ async function pollJobs() {
       </tr>`).join("");
     const active = jobs.some((j) => j.status === "queued" || j.status === "running");
     document.body.classList.toggle("working", active);
-    if ($("#tab-home").classList.contains("active")) renderHomeJobsGauge(jobs);
     clearTimeout(jobsTimer);
     if (active) jobsTimer = setTimeout(pollJobs, 2000);
   } catch { /* server restarting; retry on next action */ }
@@ -384,162 +376,13 @@ $("#retry-failed").addEventListener("click", async () => {
   } catch (e) { clipsMsg(e.message, "err"); }
 });
 
-// ---------- home dashboard ----------
-function setGauge(id, percent) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const c = 2 * Math.PI * 34;
-  const p = Math.max(0, Math.min(100, percent || 0));
-  el.style.strokeDasharray = `${(c * p / 100).toFixed(1)} ${c.toFixed(1)}`;
-}
-
-function renderHomeStatus(specs, channels) {
-  const rows = [
-    { ok: true, label: "Backend", note: "online" },
-    { ok: !!specs.gpu_name, label: "GPU", note: specs.gpu_name || "not detected" },
-    { ok: !!specs.ffmpeg_version, label: "ffmpeg", note: specs.ffmpeg_version || "not found" },
-    { ok: channels.length > 0, label: "Buffer", note: channels.length ? `${channels.length} channel(s)` : "not connected" },
-  ];
-  $("#home-status-list").innerHTML = rows.map((r) => `
-    <li><span class="dot ${r.ok ? "ok" : "muted"}"></span>${esc(r.label)}<small>${esc(r.note)}</small></li>`).join("");
-}
-
-function renderHomeJobsGauge(jobs) {
-  const done = jobs.filter((j) => j.status === "done" || j.status === "skipped").length;
-  const running = jobs.filter((j) => j.status === "running" || j.status === "queued").length;
-  const failed = jobs.filter((j) => j.status === "failed").length;
-  const pct = jobs.length ? Math.round((done / jobs.length) * 100) : 0;
-  setGauge("gauge-jobs-fill", pct);
-  $("#gauge-jobs-value").textContent = pct + "%";
-  $("#jobs-running").textContent = running;
-  $("#jobs-done").textContent = done;
-  $("#jobs-failed").textContent = failed;
-}
-
-function renderHomeClipsGauge(results, postsData) {
-  const postIdx = indexPosts(postsData.posts);
-  let total = 0, published = 0;
-  for (const m of results) {
-    for (const c of m.clips) {
-      total++;
-      if (!clipUnposted(m.source_id, c.file, postIdx)) published++;
-    }
-  }
-  const pct = total ? Math.round((published / total) * 100) : 0;
-  setGauge("gauge-clips-fill", pct);
-  $("#gauge-clips-value").textContent = pct + "%";
-  $("#clips-published").textContent = published;
-  $("#clips-total").textContent = total;
-}
-
-function renderHomeHardware({ specs, recommendations }) {
-  $("#home-hw-specs").innerHTML = `
-    <div class="mini-spec-row"><span>CPU</span><b>${specs.cpu_cores} cores</b></div>
-    <div class="mini-spec-row"><span>RAM</span><b>${specs.ram_gb || "?"} GB</b></div>
-    <div class="mini-spec-row"><span>GPU</span><b>${esc(specs.gpu_name || "none")}</b></div>
-    <div class="mini-spec-row"><span>ffmpeg</span><b>${esc(specs.ffmpeg_version || "missing")}</b></div>`;
-
-  const warnCount = recommendations.warnings.length;
-  const summaryBadge = $("#hw-summary-badge");
-  summaryBadge.className = "badge " + (warnCount ? "failed" : "done");
-  summaryBadge.textContent = warnCount ? `${warnCount} warning(s)` : "optimal";
-
-  const pending = recommendations.notes.filter((n) => n.override && !recIsActive(n, currentConfig));
-  const optimizeBadge = $("#optimize-badge");
-  optimizeBadge.className = "badge " + (pending.length ? "queued" : "done");
-  optimizeBadge.textContent = pending.length ? `${pending.length} available` : "optimized";
-  const btn = $("#apply-all-recs");
-  btn.disabled = pending.length === 0;
-  btn.textContent = pending.length ? `Optimize now (${pending.length})` : "All optimized";
-  btn.dataset.overrides = JSON.stringify(pending.map((n) => n.override));
-}
-
-function renderHomeRecentJobs(jobs) {
-  const rows = jobs.slice(0, 5);
-  $("#home-recent-jobs").innerHTML = rows.length
-    ? rows.map((j) => `
-      <div class="recent-row">
-        <span class="src" title="${esc(j.source)}">${esc(j.source)}</span>
-        <span class="badge ${j.status}">${esc(j.status)}</span>
-      </div>`).join("")
-    : `<p class="muted">No jobs yet — start one on New job.</p>`;
-}
-
-const HOME_TOGGLES = [
-  { path: "posting.enabled", label: "Enable publishing" },
-  { path: "posting.draft_only", label: "Draft only" },
-];
-
-function renderHomePostingToggles(cfg) {
-  $("#home-posting-toggles").innerHTML = HOME_TOGGLES.map((t) => `
-    <div class="toggle-row">
-      <label>${esc(t.label)}</label>
-      <span class="switch">
-        <input type="checkbox" data-path="${t.path}" ${getPath(cfg, t.path) ? "checked" : ""}>
-        <span class="track"></span>
-      </span>
-    </div>`).join("");
-}
-
-function renderBufferFoot(channels) {
-  $("#buffer-foot-status").innerHTML = channels.length
-    ? `<span class="dot ok"></span>${channels.length} channel(s) connected`
-    : `<span class="dot muted"></span>not connected`;
-}
-
-async function loadHome() {
-  try {
-    const [jobs, hardware, cfg, results, postsData, channels] = await Promise.all([
-      api("/api/jobs"), api("/api/hardware"), api("/api/config"),
-      api("/api/results"), api("/api/posts"), api("/api/buffer/channels"),
-    ]);
-    currentConfig = cfg;
-    renderHomeStatus(hardware.specs, channels);
-    renderHomeJobsGauge(jobs);
-    renderHomeClipsGauge(results, postsData);
-    renderHomeHardware(hardware);
-    renderHomeRecentJobs(jobs);
-    renderHomePostingToggles(cfg);
-    renderBufferFoot(channels);
-  } catch { /* server restarting; retry on next nav */ }
-}
-
-$("#apply-all-recs").addEventListener("click", async () => {
-  const btn = $("#apply-all-recs");
-  const overrides = JSON.parse(btn.dataset.overrides || "[]");
-  if (!overrides.length) return;
-  btn.disabled = true;
-  const msg = $("#optimize-msg");
-  try {
-    const cfg = await api("/api/config");
-    for (const ov of overrides) for (const [path, value] of Object.entries(ov)) setPath(cfg, path, value);
-    await api("/api/config", { method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(cfg) });
-    msg.textContent = "Applied and saved.";
-    msg.className = "msg inline ok";
-    loadHome();
-  } catch (e) {
-    msg.textContent = e.message;
-    msg.className = "msg inline err";
-    btn.disabled = false;
-  }
-});
-
 // ---------- config forms ----------
 // Per-run choices live on the Run tab; per-publish choices on the Clips tab;
 // Settings keeps only set-once machine/account configuration.
 
 const RUN_SCHEMA = [
-  { path: "campaign.rules", label:
-      "Campaign rules — the brand's brief, verbatim, any language (required focus, " +
-      "mandatory hashtags, per-platform @mentions, CTA). Guides clip selection and " +
-      "titles/descriptions. Changing it? Tick Force to re-select clips.",
-    type: "textarea" },
-  { path: "campaign.watermark_text", label:
-      "Watermark tag (e.g. @handle) — burned into the top-left corner of every " +
-      "clip for its full duration. Set this when the rules require an on-screen " +
-      "tag/logo at all times. Leave blank for none. Changing it? Tick Force to re-render.",
-    type: "text" },
+  { path: "campaign.rules", label: "Campaign rules (brand brief, any language)", type: "textarea" },
+  { path: "campaign.watermark_text", label: "Watermark tag (e.g. @handle)", type: "text" },
   { path: "clip_selection.clips_per_source", label: "Clips per video", type: "number", min: 1, max: 20 },
   { path: "clip_selection.min_clip_seconds", label: "Min clip length (s)", type: "number" },
   { path: "clip_selection.max_clip_seconds", label: "Max clip length (s)", type: "number" },
@@ -821,7 +664,6 @@ $("#refresh-channels").addEventListener("click", async () => {
 
 // ---------- init ----------
 pollJobs();
-loadHome();
+loadRunOptions();
 attachAutoSave("#run-options", "#run-options-msg");
 attachAutoSave("#post-options", "#post-options-msg");
-attachAutoSave("#home-posting-toggles", "#home-posting-msg");

@@ -8,6 +8,8 @@
 
 Turn long-form video into platform-ready vertical shorts: 1080x1920, burned-in karaoke captions, loudness-normalized, with per-platform titles, descriptions and hashtags. Optionally host the clips and schedule them to YouTube, Instagram and TikTok through Buffer.
 
+![The shorts GUI](docs/screenshot.png)
+
 ## Features
 
 - **Smart clip selection:** an LLM picks the best moments (heuristic fallback), guided by an optional campaign brief.
