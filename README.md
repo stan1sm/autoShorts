@@ -1,8 +1,10 @@
-# shorts-generator
+# autoShorts
 
 [![CI](https://github.com/stan1sm/autoShorts/actions/workflows/ci.yml/badge.svg)](https://github.com/stan1sm/autoShorts/actions/workflows/ci.yml)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
-![Code style: ruff](https://img.shields.io/badge/lint-ruff-261230)
+![Code style: ruff](https://img.shields.io/badge/lint-ruff-261230) ![Status: active development](https://img.shields.io/badge/status-active%20development-yellow)
+
+**Project status:** working end to end and used by the author; still in active development, so expect rough edges. The Python package is named `shorts-generator` (CLI: `shorts`).
 
 Turn long-form video into platform-ready vertical shorts: 1080x1920, burned-in karaoke captions, loudness-normalized, with per-platform titles, descriptions and hashtags. Optionally host the clips and schedule them to YouTube, Instagram and TikTok through Buffer.
 
@@ -87,3 +89,7 @@ ruff check .
 ## Roadmap
 
 Subject-tracking reframe (scaffolded, not implemented), speaker diarization, custom thumbnails, an in-GUI review/approve gate before publishing, and pulling Buffer analytics back into clip selection.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
